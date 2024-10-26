@@ -44,7 +44,7 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(docCmd)
 
-	target := "in-situ/karabiner/frag/arrow/arrow-fn.edn"
+	target := findHome() + "/" + ".saiyajin/karabiner/karabiner.edn"
 	// params := copyCR(target, "test.txt")
 
 	// open reader

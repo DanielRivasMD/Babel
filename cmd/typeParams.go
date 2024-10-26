@@ -4,8 +4,6 @@ package cmd
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // copy & replace
 type paramsCR struct {
 	orig  string
@@ -17,33 +15,33 @@ type paramsCR struct {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func newCR() paramsCR {
-	params := paramsCR{}
-	params.files = []string{}
-	params.reps = []rep{}
-	return params
+	π := paramsCR{}
+	π.files = []string{}
+	π.reps = []rep{}
+	return π
 }
 
 func replaceCR(target string, reps []rep) paramsCR {
-	params := paramsCR{}
-	params.orig = target
-	params.reps = reps
-	return params
+	π := paramsCR{}
+	π.orig = target
+	π.reps = reps
+	return π
 }
 
 func copyCR(orig, dest string) paramsCR {
-	params := newCR()
-	params.orig = orig
-	params.dest = dest
-	return params
+	π := newCR()
+	π.orig = orig
+	π.dest = dest
+	return π
 }
 
 func cloneCR(params paramsCR) paramsCR {
-	out := newCR()
-	out.orig = params.orig
-	out.dest = params.dest
-	out.files = params.files
-	out.reps = params.reps
-	return out
+	Ω := newCR()
+	Ω.orig = params.orig
+	Ω.dest = params.dest
+	Ω.files = params.files
+	Ω.reps = params.reps
+	return Ω
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
