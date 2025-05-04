@@ -21,6 +21,7 @@ const (
 
 // mappingLabels converts an EDN rule key (without any prefix markers) to a friendly label.
 var mappingLabels = map[string]string{
+	// TODO: add other characters
 	"delete_or_backspace": "BACK",
 	"return_or_enter":     "ENTER",
 	"right_shift":         "SHIFT",
@@ -144,8 +145,8 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		config.SpecialKeys[key] = DefaultKey
 	}
 	// Set default overrides.
-	config.SpecialKeys["delete_or_backspace"] = "BACK"
-	config.SpecialKeys["return_or_enter"] = "ENTER"
+	config.SpecialKeys["delete_or_backspace"] = DefaultKey
+	config.SpecialKeys["return_or_enter"] = DefaultKey
 	config.SpecialKeys["right_shift"] = DefaultKey
 	config.SpecialKeys["right_option"] = DefaultKey
 	config.SpecialKeys["right_command"] = DefaultKey
@@ -176,7 +177,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 			// Process letter keys (a-z).
 			for c := 'a'; c <= 'z'; c++ {
 				letter := string(c)
-				expected := fmt.Sprintf(":!%s#P%s", TC, letter)
+				expected := fmt.Sprintf("!%s#P%s", TC, letter)
 				if keyStr == expected {
 					val := formatEdnValue(value)
 					config.Letters[letter] = val
@@ -187,7 +188,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 
 			// Process number keys.
 			for _, d := range digitKeys {
-				expected := fmt.Sprintf(":!%s#P%s", TC, d)
+				expected := fmt.Sprintf("!%s#P%s", TC, d)
 				if keyStr == expected {
 					val := formatEdnValue(value)
 					config.Numbers[d] = val
@@ -196,13 +197,13 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 				}
 			}
 			// Process dash key.
-			if keyStr == fmt.Sprintf(":!%s#P-_", TC) || keyStr == fmt.Sprintf(":!%s#P-", TC) {
+			if keyStr == fmt.Sprintf("!%s#P-_", TC) || keyStr == fmt.Sprintf(":!%s#P-", TC) {
 				val := formatEdnValue(value)
 				config.Numbers["-"] = val
 				fmt.Printf("[DEBUG] Found number mapping for dash -> %s\n", val)
 			}
 			// Process equals key.
-			if keyStr == fmt.Sprintf(":!%s#P+=", TC) || keyStr == fmt.Sprintf(":!%s#P=", TC) {
+			if keyStr == fmt.Sprintf("!%s#P+=", TC) || keyStr == fmt.Sprintf(":!%s#P=", TC) {
 				val := formatEdnValue(value)
 				config.Numbers["="] = val
 				fmt.Printf("[DEBUG] Found number mapping for equals -> %s\n", val)
