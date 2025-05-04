@@ -1,19 +1,3 @@
-/*
-Copyright © 2025 Daniel Rivas <danielrivasmd@gmail.com>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
 package cmd
 
 import (
@@ -24,14 +8,13 @@ import (
 	"olympos.io/encoding/edn"
 )
 
-// Configurable variables
+// Package-level variable
+var TC = "TC"
+
 const (
-	TcPrefix   = "TC" // Change this to modify the EDN prefix
-	DefaultKey = " "  // Display for unmapped keys
+	DefaultKey = " - "
 	OutputDir  = "layouts"
 	OutputFile = "keyboard_layout.md"
-	// Define the EDN config file location.
-	// ednFile = "keyboard_config.edn"
 )
 
 type KeyboardConfig struct {
@@ -41,24 +24,89 @@ type KeyboardConfig struct {
 }
 
 func parse() {
-	// Optionally, you might call edn.DoStuff() here according to documentation.
+	// ednFile is assumed to be declared elsewhere.
 	config := parseEdnConfig(ednFile)
 	generateMarkdown(config)
-	fmt.Printf("Generated layout using TC variable: '%s'\n", TcPrefix)
+	fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
 	fmt.Printf("Output: %s/%s\n", OutputDir, OutputFile)
 }
 
 func parseEdnConfig(filePath string) KeyboardConfig {
-	// Read the file bytes.
+	// Read and unmarshal the EDN file.
 	file, err := os.ReadFile(filePath)
 	if err != nil {
 		panic(fmt.Sprintf("Error reading EDN file: %v", err))
 	}
 
-	// Unmarshal into a map with edn.Keyword keys.
-	var data map[edn.Keyword]interface{}
-	if err := edn.Unmarshal(file, &data); err != nil {
+	var raw interface{}
+	if err := edn.Unmarshal(file, &raw); err != nil {
 		panic(fmt.Sprintf("Error parsing EDN: %v", err))
+	}
+	fmt.Println(raw)
+	fmt.Printf("Type of raw: %T\n", raw)
+
+	// Merge multiple EDN documents if needed.
+	var docs []map[edn.Keyword]interface{}
+	switch v := raw.(type) {
+	case []interface{}:
+		for _, item := range v {
+			fmt.Println(item)
+			// Try as map[edn.Keyword]interface{}
+			if m, ok := item.(map[edn.Keyword]interface{}); ok {
+				docs = append(docs, m)
+			} else if m, ok := item.(map[string]interface{}); ok {
+				// Convert map[string]interface{} to map[edn.Keyword]interface{}
+				convMap := make(map[edn.Keyword]interface{})
+				for key, value := range m {
+					convMap[edn.Keyword(key)] = value
+				}
+				docs = append(docs, convMap)
+			} else if m, ok := item.(map[interface{}]interface{}); ok {
+				convMap := make(map[edn.Keyword]interface{})
+				for key, value := range m {
+					// Try to convert each key to edn.Keyword.
+					var k edn.Keyword
+					switch t := key.(type) {
+					case string:
+						k = edn.Keyword(t)
+					case edn.Keyword:
+						k = t
+					default:
+						k = edn.Keyword(fmt.Sprintf("%v", t))
+					}
+					convMap[k] = value
+				}
+				docs = append(docs, convMap)
+			}
+		}
+	case map[edn.Keyword]interface{}:
+		docs = append(docs, v)
+		fmt.Printf("[DEBUG] Raw is a map. Merged docs: %#v\n", docs)
+	case map[string]interface{}:
+		convMap := make(map[edn.Keyword]interface{})
+		for key, value := range v {
+			convMap[edn.Keyword(key)] = value
+		}
+		docs = append(docs, convMap)
+		fmt.Printf("[DEBUG] Raw is a map with string keys, converted to edn.Keyword. Merged docs: %#v\n", docs)
+	case map[interface{}]interface{}:
+		convMap := make(map[edn.Keyword]interface{})
+		for key, value := range v {
+			var k edn.Keyword
+			switch t := key.(type) {
+			case string:
+				k = edn.Keyword(t)
+			case edn.Keyword:
+				k = t
+			default:
+				k = edn.Keyword(fmt.Sprintf("%v", t))
+			}
+			convMap[k] = value
+		}
+		docs = append(docs, convMap)
+		fmt.Printf("[DEBUG] Raw is a map[interface{}]interface{}, converted: %#v\n", docs)
+	default:
+		fmt.Println("nothing matching")
 	}
 
 	config := KeyboardConfig{
@@ -66,7 +114,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		SpecialKeys: make(map[string]string),
 	}
 
-	// Initialize all letter keys (a-z) with the default display.
+	// Initialize letters a–z.
 	for c := 'a'; c <= 'z'; c++ {
 		config.Letters[string(c)] = DefaultKey
 	}
@@ -77,14 +125,12 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		"backslash", "comma", "period", "slash",
 		"delete_or_backspace", "return_or_enter",
 		"right_shift", "right_option", "right_command", "spacebar",
-		// Also initialize arrow keys.
 		"left_arrow", "right_arrow", "up_arrow", "down_arrow",
 	}
 	for _, key := range specialKeys {
 		config.SpecialKeys[key] = DefaultKey
 	}
-
-	// Set default labels for common special keys.
+	// Set default override labels.
 	config.SpecialKeys["delete_or_backspace"] = "BACK"
 	config.SpecialKeys["return_or_enter"] = "ENTER"
 	config.SpecialKeys["right_shift"] = "SHIFT"
@@ -92,96 +138,138 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 	config.SpecialKeys["right_command"] = "CMD"
 	config.SpecialKeys["spacebar"] = "SPACE"
 
-	// Parse EDN rules for custom mappings using the keyword key ":rules".
-	rulesRaw, ok := data[edn.Keyword(":rules")]
-	if !ok {
-		return config
-	}
-	rules, ok := rulesRaw.([]interface{})
-	if !ok {
-		return config
-	}
-
-	for _, rule := range rules {
-		ruleList, ok := rule.([]interface{})
-		if !ok || len(ruleList) < 2 {
+	// Process each document's :rules.
+	for _, doc := range docs {
+		rulesRaw, ok := doc[edn.Keyword(":rules")]
+		if !ok {
 			continue
 		}
-
-		key, ok := ruleList[0].(edn.Keyword)
+		rules, ok := rulesRaw.([]interface{})
 		if !ok {
 			continue
 		}
 
-		keyStr := string(key)
-		value := ruleList[1]
+		for _, rule := range rules {
+			ruleList, ok := rule.([]interface{})
+			if !ok || len(ruleList) < 2 {
+				continue
+			}
+			key, ok := ruleList[0].(edn.Keyword)
+			if !ok {
+				continue
+			}
+			keyStr := string(key)
+			value := ruleList[1]
 
-		// Handle letter keys (a-z).
-		for c := 'a'; c <= 'z'; c++ {
-			letter := string(c)
-			if keyStr == fmt.Sprintf(":!%s#P%s", TcPrefix, letter) {
-				config.Letters[letter] = formatEdnValue(value)
-				break
+			// Process letter keys (e.g. [:!TC#Pa ...]).
+			for c := 'a'; c <= 'z'; c++ {
+				letter := string(c)
+				expected := fmt.Sprintf(":!%s#P%s", TC, letter)
+				if keyStr == expected {
+					val := formatEdnValue(value)
+					config.Letters[letter] = val
+					fmt.Printf("[DEBUG] Found letter mapping: %s -> %s\n", letter, val)
+					break
+				}
+			}
+
+			// Process special keys.
+			switch keyStr {
+			case fmt.Sprintf(":!%s#Popen_bracket", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["open_bracket"] = val
+				fmt.Printf("[DEBUG] Found mapping for open_bracket -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pclose_bracket", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["close_bracket"] = val
+				fmt.Printf("[DEBUG] Found mapping for close_bracket -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pdelete_or_backspace", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["delete_or_backspace"] = val
+				fmt.Printf("[DEBUG] Found mapping for delete_or_backspace -> %s\n", val)
+			case fmt.Sprintf(":!%s#Preturn_or_enter", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["return_or_enter"] = val
+				fmt.Printf("[DEBUG] Found mapping for return_or_enter -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pright_shift", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["right_shift"] = val
+				fmt.Printf("[DEBUG] Found mapping for right_shift -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pright_option", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["right_option"] = val
+				fmt.Printf("[DEBUG] Found mapping for right_option -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pright_command", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["right_command"] = val
+				fmt.Printf("[DEBUG] Found mapping for right_command -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pspacebar", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["spacebar"] = val
+				fmt.Printf("[DEBUG] Found mapping for spacebar -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pleft_arrow", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["left_arrow"] = val
+				fmt.Printf("[DEBUG] Found mapping for left_arrow -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pright_arrow", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["right_arrow"] = val
+				fmt.Printf("[DEBUG] Found mapping for right_arrow -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pup_arrow", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["up_arrow"] = val
+				fmt.Printf("[DEBUG] Found mapping for up_arrow -> %s\n", val)
+			case fmt.Sprintf(":!%s#Pdown_arrow", TC):
+				val := formatEdnValue(value)
+				config.SpecialKeys["down_arrow"] = val
+				fmt.Printf("[DEBUG] Found mapping for down_arrow -> %s\n", val)
 			}
 		}
-
-		// Handle special keys.
-		switch keyStr {
-		case fmt.Sprintf(":!%s#Popen_bracket", TcPrefix):
-			config.SpecialKeys["open_bracket"] = formatEdnValue(value)
-		case fmt.Sprintf(":!%s#Pclose_bracket", TcPrefix):
-			config.SpecialKeys["close_bracket"] = formatEdnValue(value)
-		case fmt.Sprintf(":!%s#Pdelete_or_backspace", TcPrefix):
-			config.SpecialKeys["delete_or_backspace"] = formatEdnValue(value)
-		// Arrow keys.
-		case fmt.Sprintf(":!%s#Pleft_arrow", TcPrefix):
-			config.SpecialKeys["left_arrow"] = formatEdnValue(value)
-		case fmt.Sprintf(":!%s#Pright_arrow", TcPrefix):
-			config.SpecialKeys["right_arrow"] = formatEdnValue(value)
-		case fmt.Sprintf(":!%s#Pup_arrow", TcPrefix):
-			config.SpecialKeys["up_arrow"] = formatEdnValue(value)
-		case fmt.Sprintf(":!%s#Pdown_arrow", TcPrefix):
-			config.SpecialKeys["down_arrow"] = formatEdnValue(value)
-		}
 	}
-
-	config.UsedTcPrefix = TcPrefix
+	config.UsedTcPrefix = TC
 	return config
 }
 
 func formatEdnValue(value interface{}) string {
 	switch v := value.(type) {
+	// If it's a vector, process each element.
 	case []interface{}:
 		var parts []string
 		for _, item := range v {
-			// If the item is a keyword, we remove the prefix ":!T" if present.
-			if kw, ok := item.(edn.Keyword); ok {
-				str := string(kw)
-				// For example, if str is ":!Tl", remove leading ":!T" to get "l"
-				if strings.HasPrefix(str, ":!T") {
-					parts = append(parts, strings.TrimPrefix(str, ":!T"))
+			// If numeric, log and convert to string.
+			switch num := item.(type) {
+			case int, int8, int16, int32, int64, float32, float64:
+				s := fmt.Sprintf("%v", num)
+				fmt.Printf("[DEBUG] Converting numeric value %v -> %s\n", num, s)
+				parts = append(parts, s)
+			case edn.Keyword:
+				str := string(num)
+				if strings.HasPrefix(str, ":!") {
+					parts = append(parts, strings.TrimPrefix(str, ":!"))
 				} else {
 					parts = append(parts, str)
 				}
-			} else {
+			default:
 				parts = append(parts, fmt.Sprint(item))
 			}
 		}
 		return strings.Join(parts, " ")
 	case edn.Keyword:
 		str := string(v)
-		if strings.HasPrefix(str, ":!T") {
-			return strings.TrimPrefix(str, ":!T")
+		if strings.HasPrefix(str, ":!") {
+			return strings.TrimPrefix(str, ":!")
 		}
 		return str
+	// Explicitly handle numeric types.
+	case int, int8, int16, int32, int64, float32, float64:
+		s := fmt.Sprintf("%v", v)
+		fmt.Printf("[DEBUG] Converting numeric value %v -> %s\n", v, s)
+		return s
 	default:
 		return fmt.Sprint(v)
 	}
 }
 
-// extractMappingComments processes the raw EDN file text to extract comment pairs.
-// For rule lines that contain comments like "; close             ; helix",
-// it produces a mapping "helix => close".
 func extractMappingComments(filePath string) []string {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -191,9 +279,8 @@ func extractMappingComments(filePath string) []string {
 	lines := strings.Split(rawText, "\n")
 	var comments []string
 	for _, line := range lines {
-		// Look for rule lines by detecting our rule pattern.
+		// Look for rule lines (assume containing "[:!TC#P").
 		if strings.Contains(line, "[:!TC#P") {
-			// Split the line by semicolon.
 			parts := strings.Split(line, ";")
 			if len(parts) >= 3 {
 				commentVal := strings.TrimSpace(parts[1])
@@ -208,7 +295,6 @@ func extractMappingComments(filePath string) []string {
 }
 
 func generateMarkdown(config KeyboardConfig) {
-	// Create output directory.
 	if err := os.MkdirAll(OutputDir, 0755); err != nil {
 		panic(fmt.Sprintf("Error creating output directory: %v", err))
 	}
@@ -219,7 +305,6 @@ func generateMarkdown(config KeyboardConfig) {
 	}
 	defer file.Close()
 
-	// Helper function to center text within a fixed width.
 	center := func(text string, width int) string {
 		if len(text) >= width {
 			return text
@@ -228,7 +313,6 @@ func generateMarkdown(config KeyboardConfig) {
 		return fmt.Sprintf("%*s%s%*s", padding, "", text, padding, "")
 	}
 
-	// Build the markdown header.
 	markdownStart := fmt.Sprintf(`# Dynamic Keyboard Layout
 *Generated with TC='%s'*
 
@@ -236,16 +320,16 @@ func generateMarkdown(config KeyboardConfig) {
 	codeFenceStart := "```markdown\n"
 	codeFenceEnd := "```\n"
 
-	// The layout string with 40 placeholders.
+	// Layout string with 40 placeholders (note "CTRL" renamed to "CTL").
 	layout := "┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬───────────┐\n" +
 		"| ~ " + "`" + " | ! 1 | @ 2 | # 3 | $ 4 | %% 5 | ^ 6 | & 7 | * 8 | ( 9 | ) 0 | _ - | + = | %s |\n" +
 		"| TAB | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" +
 		"| CAPS | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |      %s      |\n" +
 		"| SHIFT  | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |     %s     |\n" +
-		"| CTRL | ALT | CMD │               %s               │ %s | %s │\n" +
+		"| CTL | ALT | CMD │               %s               │ %s | %s │\n" +
 		"└─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴───────────┘\n"
 
-	// First, format the layout string with its 40 placeholders.
+	// Format the layout using its 40 placeholders.
 	formattedLayout := fmt.Sprintf(layout,
 		center(config.SpecialKeys["delete_or_backspace"], 8),
 		center(config.Letters["q"], 3), center(config.Letters["w"], 3), center(config.Letters["e"], 3),
@@ -265,7 +349,6 @@ func generateMarkdown(config KeyboardConfig) {
 		config.SpecialKeys["right_option"],
 	)
 
-	// Build the active mappings section.
 	activeMappingsSection := fmt.Sprintf("\n### Active Mappings\n- **Letters**: %s\n- **Specials**: %s (SPACE), %s (ENTER)\n- **Arrows**: %s\n- **TC Variable**: '%s' (change in script)\n",
 		getActiveMappings(config.Letters),
 		config.SpecialKeys["spacebar"],
@@ -274,7 +357,6 @@ func generateMarkdown(config KeyboardConfig) {
 		config.UsedTcPrefix,
 	)
 
-	// Extract mapping comments from the EDN file.
 	mappingComments := extractMappingComments(ednFile)
 	mappingCommentsSection := ""
 	if len(mappingComments) > 0 {
@@ -284,10 +366,8 @@ func generateMarkdown(config KeyboardConfig) {
 		}
 	}
 
-	// Assemble the final content.
 	finalContent := markdownStart + codeFenceStart + formattedLayout + codeFenceEnd +
-		activeMappingsSection +
-		mappingCommentsSection
+		activeMappingsSection + mappingCommentsSection
 
 	if _, writeErr := file.WriteString(finalContent); writeErr != nil {
 		panic(fmt.Sprintf("Error writing to output file: %v", writeErr))
