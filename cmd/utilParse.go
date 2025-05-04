@@ -49,6 +49,7 @@ func parse() {
 }
 
 func parseEdnConfig(filePath string) KeyboardConfig {
+	// Read the file bytes.
 	file, err := os.ReadFile(filePath)
 	if err != nil {
 		panic(fmt.Sprintf("Error reading EDN file: %v", err))
@@ -76,12 +77,13 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		"backslash", "comma", "period", "slash",
 		"delete_or_backspace", "return_or_enter",
 		"right_shift", "right_option", "right_command", "spacebar",
-		// Arrow keys added.
+		// Also initialize arrow keys.
 		"left_arrow", "right_arrow", "up_arrow", "down_arrow",
 	}
 	for _, key := range specialKeys {
 		config.SpecialKeys[key] = DefaultKey
 	}
+
 	// Set default labels for common special keys.
 	config.SpecialKeys["delete_or_backspace"] = "BACK"
 	config.SpecialKeys["return_or_enter"] = "ENTER"
@@ -131,7 +133,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 			config.SpecialKeys["close_bracket"] = formatEdnValue(value)
 		case fmt.Sprintf(":!%s#Pdelete_or_backspace", TcPrefix):
 			config.SpecialKeys["delete_or_backspace"] = formatEdnValue(value)
-		// Arrow keys
+		// Arrow keys.
 		case fmt.Sprintf(":!%s#Pleft_arrow", TcPrefix):
 			config.SpecialKeys["left_arrow"] = formatEdnValue(value)
 		case fmt.Sprintf(":!%s#Pright_arrow", TcPrefix):
@@ -152,14 +154,57 @@ func formatEdnValue(value interface{}) string {
 	case []interface{}:
 		var parts []string
 		for _, item := range v {
-			parts = append(parts, fmt.Sprint(item))
+			// If the item is a keyword, we remove the prefix ":!T" if present.
+			if kw, ok := item.(edn.Keyword); ok {
+				str := string(kw)
+				// For example, if str is ":!Tl", remove leading ":!T" to get "l"
+				if strings.HasPrefix(str, ":!T") {
+					parts = append(parts, strings.TrimPrefix(str, ":!T"))
+				} else {
+					parts = append(parts, str)
+				}
+			} else {
+				parts = append(parts, fmt.Sprint(item))
+			}
 		}
 		return strings.Join(parts, " ")
 	case edn.Keyword:
-		return string(v)
+		str := string(v)
+		if strings.HasPrefix(str, ":!T") {
+			return strings.TrimPrefix(str, ":!T")
+		}
+		return str
 	default:
 		return fmt.Sprint(v)
 	}
+}
+
+// extractMappingComments processes the raw EDN file text to extract comment pairs.
+// For rule lines that contain comments like "; close             ; helix",
+// it produces a mapping "helix => close".
+func extractMappingComments(filePath string) []string {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil
+	}
+	rawText := string(data)
+	lines := strings.Split(rawText, "\n")
+	var comments []string
+	for _, line := range lines {
+		// Look for rule lines by detecting our rule pattern.
+		if strings.Contains(line, "[:!TC#P") {
+			// Split the line by semicolon.
+			parts := strings.Split(line, ";")
+			if len(parts) >= 3 {
+				commentVal := strings.TrimSpace(parts[1])
+				commentKey := strings.TrimSpace(parts[2])
+				if commentVal != "" && commentKey != "" {
+					comments = append(comments, fmt.Sprintf("%s => %s", commentKey, commentVal))
+				}
+			}
+		}
+	}
+	return comments
 }
 
 func generateMarkdown(config KeyboardConfig) {
@@ -191,7 +236,7 @@ func generateMarkdown(config KeyboardConfig) {
 	codeFenceStart := "```markdown\n"
 	codeFenceEnd := "```\n"
 
-	// The layout string contains 40 placeholders.
+	// The layout string with 40 placeholders.
 	layout := "┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬───────────┐\n" +
 		"| ~ " + "`" + " | ! 1 | @ 2 | # 3 | $ 4 | %% 5 | ^ 6 | & 7 | * 8 | ( 9 | ) 0 | _ - | + = | %s |\n" +
 		"| TAB | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" +
@@ -220,11 +265,8 @@ func generateMarkdown(config KeyboardConfig) {
 		config.SpecialKeys["right_option"],
 	)
 
-	// Build the overall content, inserting the formatted layout.
-	content := fmt.Sprintf("%s%s%s\n### Active Mappings\n- **Letters**: %s\n- **Specials**: %s (SPACE), %s (ENTER)\n- **Arrows**: %s\n- **TC Variable**: '%s' (change in script)\n",
-		markdownStart,
-		codeFenceStart,
-		formattedLayout,
+	// Build the active mappings section.
+	activeMappingsSection := fmt.Sprintf("\n### Active Mappings\n- **Letters**: %s\n- **Specials**: %s (SPACE), %s (ENTER)\n- **Arrows**: %s\n- **TC Variable**: '%s' (change in script)\n",
 		getActiveMappings(config.Letters),
 		config.SpecialKeys["spacebar"],
 		config.SpecialKeys["return_or_enter"],
@@ -232,7 +274,20 @@ func generateMarkdown(config KeyboardConfig) {
 		config.UsedTcPrefix,
 	)
 
-	finalContent := content + codeFenceEnd
+	// Extract mapping comments from the EDN file.
+	mappingComments := extractMappingComments(ednFile)
+	mappingCommentsSection := ""
+	if len(mappingComments) > 0 {
+		mappingCommentsSection = "\n### Mapping Comments\n"
+		for _, comment := range mappingComments {
+			mappingCommentsSection += "- " + comment + "\n"
+		}
+	}
+
+	// Assemble the final content.
+	finalContent := markdownStart + codeFenceStart + formattedLayout + codeFenceEnd +
+		activeMappingsSection +
+		mappingCommentsSection
 
 	if _, writeErr := file.WriteString(finalContent); writeErr != nil {
 		panic(fmt.Sprintf("Error writing to output file: %v", writeErr))
