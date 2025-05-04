@@ -29,6 +29,7 @@ var mappingLabels = map[string]string{
 	"right_option":        "ALT",
 	"right_command":       "CMD",
 	"spacebar":            "SPACE",
+	// TODO: add lefts
 }
 
 type KeyboardConfig struct {
@@ -60,15 +61,15 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 	if err := edn.Unmarshal(file, &raw); err != nil {
 		panic(fmt.Sprintf("Error parsing EDN: %v", err))
 	}
-	fmt.Printf("[DEBUG] Type of raw: %T\n", raw)
-	fmt.Println("[DEBUG] Raw:", raw)
+	// fmt.Printf("[DEBUG] Type of raw: %T\n", raw)
+	// fmt.Println("[DEBUG] Raw:", raw)
 
 	// Merge multiple EDN documents if needed.
 	var docs []map[edn.Keyword]interface{}
 	switch v := raw.(type) {
 	case []interface{}:
 		for _, item := range v {
-			fmt.Println("[DEBUG] Slice item:", item)
+			// fmt.Println("[DEBUG] Slice item:", item)
 			if m, ok := item.(map[edn.Keyword]interface{}); ok {
 				docs = append(docs, m)
 			} else if m, ok := item.(map[interface{}]interface{}); ok {
@@ -88,14 +89,14 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		}
 	case map[edn.Keyword]interface{}:
 		docs = append(docs, v)
-		fmt.Printf("[DEBUG] Raw (edn.Keyword keys): %#v\n", docs)
+		// fmt.Printf("[DEBUG] Raw (edn.Keyword keys): %#v\n", docs)
 	case map[string]interface{}:
 		convMap := make(map[edn.Keyword]interface{})
 		for key, value := range v {
 			convMap[edn.Keyword(key)] = value
 		}
 		docs = append(docs, convMap)
-		fmt.Printf("[DEBUG] Raw (string keys): %#v\n", docs)
+		// fmt.Printf("[DEBUG] Raw (string keys): %#v\n", docs)
 	case map[interface{}]interface{}:
 		convMap := make(map[edn.Keyword]interface{})
 		for key, value := range v {
@@ -109,7 +110,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 			convMap[k] = value
 		}
 		docs = append(docs, convMap)
-		fmt.Printf("[DEBUG] Raw (interface{} keys): %#v\n", docs)
+		// fmt.Printf("[DEBUG] Raw (interface{} keys): %#v\n", docs)
 	default:
 		fmt.Println("nothing matching")
 	}
@@ -136,8 +137,10 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 
 	// Initialize special keys.
 	specialKeys := []string{
-		"open_bracket", "close_bracket", "semicolon", "quote",
-		"backslash", "comma", "period", "slash",
+		"hyphen", "equal_sign",
+		"open_bracket", "close_bracket",
+		"semicolon", "quote", "backslash",
+		"comma", "period", "slash",
 		"delete_or_backspace", "return_or_enter",
 		"right_shift", "right_option", "right_command", "spacebar",
 		"left_arrow", "right_arrow", "up_arrow", "down_arrow",
@@ -146,6 +149,16 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		config.SpecialKeys[key] = DefaultKey
 	}
 	// Set default overrides.
+	config.SpecialKeys["hyphen"] = DefaultKey
+	config.SpecialKeys["equal_sign"] = DefaultKey
+	config.SpecialKeys["open_bracket"] = DefaultKey
+	config.SpecialKeys["close_bracket"] = DefaultKey
+	config.SpecialKeys["semicolon"] = DefaultKey
+	config.SpecialKeys["quote"] = DefaultKey
+	config.SpecialKeys["backslash"] = DefaultKey
+	config.SpecialKeys["comma"] = DefaultKey
+	config.SpecialKeys["period"] = DefaultKey
+	config.SpecialKeys["slash"] = DefaultKey
 	config.SpecialKeys["delete_or_backspace"] = DefaultKey
 	config.SpecialKeys["return_or_enter"] = DefaultKey
 	config.SpecialKeys["right_shift"] = DefaultKey
@@ -199,59 +212,83 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 			}
 
 			// // Process special keys (using substring matching).
-			if strings.Contains(keyStr, "hyphen") {
+			if strings.Contains(keyStr, "Phyphen") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["hyphen"] = val
 				fmt.Printf("[DEBUG] Found mapping for hyphen -> %s\n", val)
-			} else if strings.Contains(keyStr, "equal_sign") {
+			} else if strings.Contains(keyStr, "Pequal_sign") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["equal_sign"] = val
 				fmt.Printf("[DEBUG] Found mapping for equal_sign -> %s\n", val)
-			} else if strings.Contains(keyStr, "open_bracket") {
+			} else if strings.Contains(keyStr, "Popen_bracket") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["open_bracket"] = val
 				fmt.Printf("[DEBUG] Found mapping for open_bracket -> %s\n", val)
-			} else if strings.Contains(keyStr, "close_bracket") {
+			} else if strings.Contains(keyStr, "Pclose_bracket") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["close_bracket"] = val
 				fmt.Printf("[DEBUG] Found mapping for close_bracket -> %s\n", val)
-			} else if strings.Contains(keyStr, "delete_or_backspace") {
+			} else if strings.Contains(keyStr, "Psemicolon") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["semicolon"] = val
+				fmt.Printf("[DEBUG] Found mapping for semicolon -> %s\n", val)
+			} else if strings.Contains(keyStr, "Pquote") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["quote"] = val
+				fmt.Printf("[DEBUG] Found mapping for quote -> %s\n", val)
+							} else if strings.Contains(keyStr, "Pbackslash") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["backslash"] = val
+				fmt.Printf("[DEBUG] Found mapping for backslash -> %s\n", val)
+							} else if strings.Contains(keyStr, "Pcomma") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["comma"] = val
+				fmt.Printf("[DEBUG] Found mapping for comma -> %s\n", val)
+							} else if strings.Contains(keyStr, "Pperiod") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["period"] = val
+				fmt.Printf("[DEBUG] Found mapping for period -> %s\n", val)
+							} else if strings.Contains(keyStr, "Pslash") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["slash"] = val
+				fmt.Printf("[DEBUG] Found mapping for slash -> %s\n", val)
+			} else if strings.Contains(keyStr, "Pdelete_or_backspace") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["delete_or_backspace"] = val
 				fmt.Printf("[DEBUG] Found mapping for delete_or_backspace -> %s\n", val)
-			} else if strings.Contains(keyStr, "return_or_enter") {
+			} else if strings.Contains(keyStr, "Preturn_or_enter") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["return_or_enter"] = val
 				fmt.Printf("[DEBUG] Found mapping for return_or_enter -> %s\n", val)
-			} else if strings.Contains(keyStr, "right_shift") {
+			} else if strings.Contains(keyStr, "Pright_shift") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_shift"] = val
 				fmt.Printf("[DEBUG] Found mapping for right_shift -> %s\n", val)
-			} else if strings.Contains(keyStr, "right_option") {
+			} else if strings.Contains(keyStr, "Pright_option") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_option"] = val
 				fmt.Printf("[DEBUG] Found mapping for right_option -> %s\n", val)
-			} else if strings.Contains(keyStr, "right_command") {
+			} else if strings.Contains(keyStr, "Pright_command") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_command"] = val
 				fmt.Printf("[DEBUG] Found mapping for right_command -> %s\n", val)
-			} else if strings.Contains(keyStr, "spacebar") {
+			} else if strings.Contains(keyStr, "Pspacebar") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["spacebar"] = val
 				fmt.Printf("[DEBUG] Found mapping for spacebar -> %s\n", val)
-			} else if strings.Contains(keyStr, "left_arrow") {
+			} else if strings.Contains(keyStr, "Pleft_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["left_arrow"] = val
 				fmt.Printf("[DEBUG] Found mapping for left_arrow -> %s\n", val)
-			} else if strings.Contains(keyStr, "right_arrow") {
+			} else if strings.Contains(keyStr, "Pright_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_arrow"] = val
 				fmt.Printf("[DEBUG] Found mapping for right_arrow -> %s\n", val)
-			} else if strings.Contains(keyStr, "up_arrow") {
+			} else if strings.Contains(keyStr, "Pup_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["up_arrow"] = val
 				fmt.Printf("[DEBUG] Found mapping for up_arrow -> %s\n", val)
-			} else if strings.Contains(keyStr, "down_arrow") {
+			} else if strings.Contains(keyStr, "Pdown_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["down_arrow"] = val
 				fmt.Printf("[DEBUG] Found mapping for down_arrow -> %s\n", val)
@@ -356,7 +393,7 @@ func generateMarkdown(config KeyboardConfig) {
 		config.Numbers["1"], config.Numbers["2"], config.Numbers["3"],
 		config.Numbers["4"], config.Numbers["5"], config.Numbers["6"],
 		config.Numbers["7"], config.Numbers["8"], config.Numbers["9"],
-		config.Numbers["0"], config.Numbers["-"], config.Numbers["="],
+		config.Numbers["0"], config.SpecialKeys["hyphen"], config.SpecialKeys["equal_sign"],
 		config.SpecialKeys["delete_or_backspace"],
 	)
 
