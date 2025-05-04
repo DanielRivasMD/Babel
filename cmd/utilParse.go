@@ -43,9 +43,9 @@ func parse() {
 	// ednFile is assumed declared externally.
 	config := parseEdnConfig(ednFile)
 	// Dump configuration maps for debugging.
-	fmt.Println("[DEBUG] Letters:", config.Letters)
-	fmt.Println("[DEBUG] Numbers:", config.Numbers)
-	fmt.Println("[DEBUG] SpecialKeys:", config.SpecialKeys)
+	// fmt.Println("[DEBUG] Letters:", config.Letters)
+	// fmt.Println("[DEBUG] Numbers:", config.Numbers)
+	// fmt.Println("[DEBUG] SpecialKeys:", config.SpecialKeys)
 
 	generateMarkdown(config)
 	fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
@@ -195,7 +195,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 				if keyStr == expected {
 					val := formatEdnValue(value)
 					config.Letters[letter] = val
-					fmt.Printf("[DEBUG] Found letter mapping: %s -> %s\n", letter, val)
+					// fmt.Printf("[DEBUG] Found letter mapping: %s -> %s\n", letter, val)
 					break
 				}
 			}
@@ -206,7 +206,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 				if keyStr == expected {
 					val := formatEdnValue(value)
 					config.Numbers[d] = val
-					fmt.Printf("[DEBUG] Found number mapping: %s -> %s\n", d, val)
+					// fmt.Printf("[DEBUG] Found number mapping: %s -> %s\n", d, val)
 					break
 				}
 			}
@@ -215,83 +215,83 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 			if strings.Contains(keyStr, "Phyphen") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["hyphen"] = val
-				fmt.Printf("[DEBUG] Found mapping for hyphen -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for hyphen -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pequal_sign") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["equal_sign"] = val
-				fmt.Printf("[DEBUG] Found mapping for equal_sign -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for equal_sign -> %s\n", val)
 			} else if strings.Contains(keyStr, "Popen_bracket") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["open_bracket"] = val
-				fmt.Printf("[DEBUG] Found mapping for open_bracket -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for open_bracket -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pclose_bracket") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["close_bracket"] = val
-				fmt.Printf("[DEBUG] Found mapping for close_bracket -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for close_bracket -> %s\n", val)
 			} else if strings.Contains(keyStr, "Psemicolon") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["semicolon"] = val
-				fmt.Printf("[DEBUG] Found mapping for semicolon -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for semicolon -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pquote") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["quote"] = val
-				fmt.Printf("[DEBUG] Found mapping for quote -> %s\n", val)
-							} else if strings.Contains(keyStr, "Pbackslash") {
+				// fmt.Printf("[DEBUG] Found mapping for quote -> %s\n", val)
+			} else if strings.Contains(keyStr, "Pbackslash") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["backslash"] = val
-				fmt.Printf("[DEBUG] Found mapping for backslash -> %s\n", val)
-							} else if strings.Contains(keyStr, "Pcomma") {
+				// fmt.Printf("[DEBUG] Found mapping for backslash -> %s\n", val)
+			} else if strings.Contains(keyStr, "Pcomma") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["comma"] = val
-				fmt.Printf("[DEBUG] Found mapping for comma -> %s\n", val)
-							} else if strings.Contains(keyStr, "Pperiod") {
+				// fmt.Printf("[DEBUG] Found mapping for comma -> %s\n", val)
+			} else if strings.Contains(keyStr, "Pperiod") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["period"] = val
-				fmt.Printf("[DEBUG] Found mapping for period -> %s\n", val)
-							} else if strings.Contains(keyStr, "Pslash") {
+				// fmt.Printf("[DEBUG] Found mapping for period -> %s\n", val)
+			} else if strings.Contains(keyStr, "Pslash") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["slash"] = val
-				fmt.Printf("[DEBUG] Found mapping for slash -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for slash -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pdelete_or_backspace") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["delete_or_backspace"] = val
-				fmt.Printf("[DEBUG] Found mapping for delete_or_backspace -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for delete_or_backspace -> %s\n", val)
 			} else if strings.Contains(keyStr, "Preturn_or_enter") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["return_or_enter"] = val
-				fmt.Printf("[DEBUG] Found mapping for return_or_enter -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for return_or_enter -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pright_shift") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_shift"] = val
-				fmt.Printf("[DEBUG] Found mapping for right_shift -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for right_shift -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pright_option") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_option"] = val
-				fmt.Printf("[DEBUG] Found mapping for right_option -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for right_option -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pright_command") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_command"] = val
-				fmt.Printf("[DEBUG] Found mapping for right_command -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for right_command -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pspacebar") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["spacebar"] = val
-				fmt.Printf("[DEBUG] Found mapping for spacebar -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for spacebar -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pleft_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["left_arrow"] = val
-				fmt.Printf("[DEBUG] Found mapping for left_arrow -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for left_arrow -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pright_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["right_arrow"] = val
-				fmt.Printf("[DEBUG] Found mapping for right_arrow -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for right_arrow -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pup_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["up_arrow"] = val
-				fmt.Printf("[DEBUG] Found mapping for up_arrow -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for up_arrow -> %s\n", val)
 			} else if strings.Contains(keyStr, "Pdown_arrow") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["down_arrow"] = val
-				fmt.Printf("[DEBUG] Found mapping for down_arrow -> %s\n", val)
+				// fmt.Printf("[DEBUG] Found mapping for down_arrow -> %s\n", val)
 			}
 		}
 	}
