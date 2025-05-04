@@ -30,6 +30,8 @@ const (
 	DefaultKey = " "  // Display for unmapped keys
 	OutputDir  = "layouts"
 	OutputFile = "keyboard_layout.md"
+	// Define the EDN config file location.
+	// ednFile = "keyboard_config.edn"
 )
 
 type KeyboardConfig struct {
@@ -39,10 +41,7 @@ type KeyboardConfig struct {
 }
 
 func parse() {
-	// Example of using an EDN helper if desired:
-	// edn.DoStuff() // see documentation for further usage
-
-	// Note: 'ednFile' should be defined (for example, as a flag or constant).
+	// Optionally, you might call edn.DoStuff() here according to documentation.
 	config := parseEdnConfig(ednFile)
 	generateMarkdown(config)
 	fmt.Printf("Generated layout using TC variable: '%s'\n", TcPrefix)
@@ -77,6 +76,8 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		"backslash", "comma", "period", "slash",
 		"delete_or_backspace", "return_or_enter",
 		"right_shift", "right_option", "right_command", "spacebar",
+		// Arrow keys added.
+		"left_arrow", "right_arrow", "up_arrow", "down_arrow",
 	}
 	for _, key := range specialKeys {
 		config.SpecialKeys[key] = DefaultKey
@@ -130,6 +131,15 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 			config.SpecialKeys["close_bracket"] = formatEdnValue(value)
 		case fmt.Sprintf(":!%s#Pdelete_or_backspace", TcPrefix):
 			config.SpecialKeys["delete_or_backspace"] = formatEdnValue(value)
+		// Arrow keys
+		case fmt.Sprintf(":!%s#Pleft_arrow", TcPrefix):
+			config.SpecialKeys["left_arrow"] = formatEdnValue(value)
+		case fmt.Sprintf(":!%s#Pright_arrow", TcPrefix):
+			config.SpecialKeys["right_arrow"] = formatEdnValue(value)
+		case fmt.Sprintf(":!%s#Pup_arrow", TcPrefix):
+			config.SpecialKeys["up_arrow"] = formatEdnValue(value)
+		case fmt.Sprintf(":!%s#Pdown_arrow", TcPrefix):
+			config.SpecialKeys["down_arrow"] = formatEdnValue(value)
 		}
 	}
 
@@ -173,17 +183,15 @@ func generateMarkdown(config KeyboardConfig) {
 		return fmt.Sprintf("%*s%s%*s", padding, "", text, padding, "")
 	}
 
-	// Build the markdown content.
+	// Build the markdown header.
 	markdownStart := fmt.Sprintf(`# Dynamic Keyboard Layout
 *Generated with TC='%s'*
 
 `, config.UsedTcPrefix)
-
 	codeFenceStart := "```markdown\n"
 	codeFenceEnd := "```\n"
 
-	// Create the keyboard layout string.
-	// The line with the backtick is split to safely insert it.
+	// The layout string contains 40 placeholders.
 	layout := "┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬───────────┐\n" +
 		"| ~ " + "`" + " | ! 1 | @ 2 | # 3 | $ 4 | %% 5 | ^ 6 | & 7 | * 8 | ( 9 | ) 0 | _ - | + = | %s |\n" +
 		"| TAB | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n" +
@@ -192,18 +200,8 @@ func generateMarkdown(config KeyboardConfig) {
 		"| CTRL | ALT | CMD │               %s               │ %s | %s │\n" +
 		"└─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴───────────┘\n"
 
-	content := fmt.Sprintf(
-		"%s%s%s"+
-			"\n### Active Mappings\n- **Letters**: %s\n- **Specials**: %s (SPACE), %s (ENTER)\n- **TC Variable**: '%s' (change in script)\n",
-		markdownStart,
-		codeFenceStart,
-		layout,
-		getActiveMappings(config.Letters),
-		config.SpecialKeys["spacebar"],
-		config.SpecialKeys["return_or_enter"],
-		config.UsedTcPrefix,
-
-		// Placeholders for dynamically inserted content in the layout:
+	// First, format the layout string with its 40 placeholders.
+	formattedLayout := fmt.Sprintf(layout,
 		center(config.SpecialKeys["delete_or_backspace"], 8),
 		center(config.Letters["q"], 3), center(config.Letters["w"], 3), center(config.Letters["e"], 3),
 		center(config.Letters["r"], 3), center(config.Letters["t"], 3), center(config.Letters["y"], 3),
@@ -220,6 +218,18 @@ func generateMarkdown(config KeyboardConfig) {
 		config.SpecialKeys["slash"], center(config.SpecialKeys["right_shift"], 8),
 		center(config.SpecialKeys["spacebar"], 16), config.SpecialKeys["right_command"],
 		config.SpecialKeys["right_option"],
+	)
+
+	// Build the overall content, inserting the formatted layout.
+	content := fmt.Sprintf("%s%s%s\n### Active Mappings\n- **Letters**: %s\n- **Specials**: %s (SPACE), %s (ENTER)\n- **Arrows**: %s\n- **TC Variable**: '%s' (change in script)\n",
+		markdownStart,
+		codeFenceStart,
+		formattedLayout,
+		getActiveMappings(config.Letters),
+		config.SpecialKeys["spacebar"],
+		config.SpecialKeys["return_or_enter"],
+		getArrowMappings(config),
+		config.UsedTcPrefix,
 	)
 
 	finalContent := content + codeFenceEnd
@@ -241,4 +251,18 @@ func getActiveMappings(letters map[string]string) string {
 		return "None"
 	}
 	return strings.Join(active, ", ")
+}
+
+func getArrowMappings(config KeyboardConfig) string {
+	arrows := []string{"left_arrow", "right_arrow", "up_arrow", "down_arrow"}
+	var mappings []string
+	for _, arrow := range arrows {
+		if val, ok := config.SpecialKeys[arrow]; ok && val != DefaultKey {
+			mappings = append(mappings, fmt.Sprintf("%s: %s", arrow, val))
+		}
+	}
+	if len(mappings) == 0 {
+		return "None"
+	}
+	return strings.Join(mappings, ", ")
 }
