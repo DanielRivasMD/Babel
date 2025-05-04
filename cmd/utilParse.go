@@ -21,7 +21,8 @@ const (
 
 // mappingLabels converts an EDN rule key (without any prefix markers) to a friendly label.
 var mappingLabels = map[string]string{
-	// TODO: add other characters
+	"hyphen":              "-",
+	"equal_sign":          "=",
 	"delete_or_backspace": "BACK",
 	"return_or_enter":     "ENTER",
 	"right_shift":         "SHIFT",
@@ -196,21 +197,17 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 					break
 				}
 			}
-			// Process dash key.
-			if keyStr == fmt.Sprintf("!%s#P-_", TC) || keyStr == fmt.Sprintf(":!%s#P-", TC) {
-				val := formatEdnValue(value)
-				config.Numbers["-"] = val
-				fmt.Printf("[DEBUG] Found number mapping for dash -> %s\n", val)
-			}
-			// Process equals key.
-			if keyStr == fmt.Sprintf("!%s#P+=", TC) || keyStr == fmt.Sprintf(":!%s#P=", TC) {
-				val := formatEdnValue(value)
-				config.Numbers["="] = val
-				fmt.Printf("[DEBUG] Found number mapping for equals -> %s\n", val)
-			}
 
-			// Process special keys (using substring matching).
-			if strings.Contains(keyStr, "open_bracket") {
+			// // Process special keys (using substring matching).
+			if strings.Contains(keyStr, "hyphen") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["hyphen"] = val
+				fmt.Printf("[DEBUG] Found mapping for hyphen -> %s\n", val)
+			} else if strings.Contains(keyStr, "equal_sign") {
+				val := formatEdnValue(value)
+				config.SpecialKeys["equal_sign"] = val
+				fmt.Printf("[DEBUG] Found mapping for equal_sign -> %s\n", val)
+			} else if strings.Contains(keyStr, "open_bracket") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["open_bracket"] = val
 				fmt.Printf("[DEBUG] Found mapping for open_bracket -> %s\n", val)
