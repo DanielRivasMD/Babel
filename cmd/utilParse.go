@@ -11,13 +11,23 @@ import (
 // Package-level variable for the TC prefix.
 var TC = "TC"
 
-// ednFile is assumed to be declared elsewhere.
+// ednFile is assumed to be declared externally.
 
 const (
 	DefaultKey = " - "
 	OutputDir  = "layouts"
 	OutputFile = "keyboard_layout.md"
 )
+
+// mappingLabels converts an EDN rule key (without any prefix markers) to a friendly label.
+var mappingLabels = map[string]string{
+	"delete_or_backspace": "BACK",
+	"return_or_enter":     "ENTER",
+	"right_shift":         "SHIFT",
+	"right_option":        "ALT",
+	"right_command":       "CMD",
+	"spacebar":            "SPACE",
+}
 
 type KeyboardConfig struct {
 	Letters      map[string]string
@@ -27,9 +37,9 @@ type KeyboardConfig struct {
 }
 
 func parse() {
-	// ednFile must be set externally.
+	// ednFile is assumed declared externally.
 	config := parseEdnConfig(ednFile)
-	// Debug logging: dump the config maps
+	// Dump configuration maps for debugging.
 	fmt.Println("[DEBUG] Letters:", config.Letters)
 	fmt.Println("[DEBUG] Numbers:", config.Numbers)
 	fmt.Println("[DEBUG] SpecialKeys:", config.SpecialKeys)
@@ -102,14 +112,14 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		fmt.Println("nothing matching")
 	}
 
-	// Initialize a new configuration.
+	// Initialize configuration.
 	config := KeyboardConfig{
 		Letters:     make(map[string]string),
 		Numbers:     make(map[string]string),
 		SpecialKeys: make(map[string]string),
 	}
 
-	// Initialize letters (a-z) with the default value.
+	// Initialize letter keys (a-z) with default.
 	for c := 'a'; c <= 'z'; c++ {
 		config.Letters[string(c)] = DefaultKey
 	}
@@ -133,15 +143,15 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 	for _, key := range specialKeys {
 		config.SpecialKeys[key] = DefaultKey
 	}
-	// Default overrides.
+	// Set default overrides.
 	config.SpecialKeys["delete_or_backspace"] = "BACK"
 	config.SpecialKeys["return_or_enter"] = "ENTER"
-	config.SpecialKeys["right_shift"] = "SHIFT"
-	config.SpecialKeys["right_option"] = "ALT"
-	config.SpecialKeys["right_command"] = "CMD"
-	config.SpecialKeys["spacebar"] = "SPACE"
+	config.SpecialKeys["right_shift"] = DefaultKey
+	config.SpecialKeys["right_option"] = DefaultKey
+	config.SpecialKeys["right_command"] = DefaultKey
+	config.SpecialKeys["spacebar"] = DefaultKey
 
-	// Process EDN rules from each document.
+	// Process EDN rules.
 	for _, doc := range docs {
 		rulesRaw, ok := doc[edn.Keyword(":rules")]
 		if !ok {
@@ -198,11 +208,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 				fmt.Printf("[DEBUG] Found number mapping for equals -> %s\n", val)
 			}
 
-			fmt.Println()
-			fmt.Println(keyStr)
-			fmt.Println()
-
-			// Process special keys using substring matching.
+			// Process special keys (using substring matching).
 			if strings.Contains(keyStr, "open_bracket") {
 				val := formatEdnValue(value)
 				config.SpecialKeys["open_bracket"] = val
@@ -252,7 +258,6 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 				config.SpecialKeys["down_arrow"] = val
 				fmt.Printf("[DEBUG] Found mapping for down_arrow -> %s\n", val)
 			}
-
 		}
 	}
 	config.UsedTcPrefix = TC
@@ -264,20 +269,20 @@ func formatEdnValue(value interface{}) string {
 	case []interface{}:
 		var parts []string
 		for _, item := range v {
-			switch num := item.(type) {
+			switch x := item.(type) {
 			case int, int8, int16, int32, int64, float32, float64:
-				s := fmt.Sprintf("%v", num)
-				fmt.Printf("[DEBUG] Converting numeric value %v -> %s\n", num, s)
+				s := fmt.Sprintf("%v", x)
+				fmt.Printf("[DEBUG] Converting numeric value %v -> %s\n", x, s)
 				parts = append(parts, s)
 			case edn.Keyword:
-				str := string(num)
-				if strings.HasPrefix(str, ":!") {
-					parts = append(parts, strings.TrimPrefix(str, ":!"))
-				} else {
-					parts = append(parts, str)
-				}
+				str := string(x)
+				// Trim any leading ":!" or "!".
+				trimmed := strings.TrimPrefix(str, ":!")
+				trimmed = strings.TrimPrefix(trimmed, "!")
+				parts = append(parts, trimmed)
 			case string:
-				parts = append(parts, num)
+				trimmed := strings.TrimPrefix(x, "!")
+				parts = append(parts, trimmed)
 			default:
 				parts = append(parts, fmt.Sprint(item))
 			}
@@ -285,10 +290,9 @@ func formatEdnValue(value interface{}) string {
 		return strings.Join(parts, " ")
 	case edn.Keyword:
 		str := string(v)
-		if strings.HasPrefix(str, ":!") {
-			return strings.TrimPrefix(str, ":!")
-		}
-		return str
+		trimmed := strings.TrimPrefix(str, ":!")
+		trimmed = strings.TrimPrefix(trimmed, "!")
+		return trimmed
 	case int, int8, int16, int32, int64, float32, float64:
 		s := fmt.Sprintf("%v", v)
 		fmt.Printf("[DEBUG] Converting numeric value %v -> %s\n", v, s)
@@ -298,6 +302,7 @@ func formatEdnValue(value interface{}) string {
 	}
 }
 
+// extractMappingComments extracts mapping comments using a regular expression that captures the key name.
 func extractMappingComments(filePath string) []string {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -347,18 +352,16 @@ func generateMarkdown(config KeyboardConfig) {
 	codeFenceStart := "```markdown\n"
 	codeFenceEnd := "```\n"
 
-	// Build the dynamic number row.
+	// Build the dynamic number row. The final cell uses the value for delete_or_backspace.
 	numberRow := fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |",
 		"~ `",
 		config.Numbers["1"], config.Numbers["2"], config.Numbers["3"],
 		config.Numbers["4"], config.Numbers["5"], config.Numbers["6"],
 		config.Numbers["7"], config.Numbers["8"], config.Numbers["9"],
 		config.Numbers["0"], config.Numbers["-"], config.Numbers["="],
-		// Replace literal "NUM" with the value of delete_or_backspace (i.e. BACK)
 		config.SpecialKeys["delete_or_backspace"],
 	)
 
-	// Build the remaining rows.
 	topBorder := "┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬───────────┐\n"
 	secondRow := fmt.Sprintf("| TAB | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
 		center(config.Letters["q"], 3), center(config.Letters["w"], 3), center(config.Letters["e"], 3),
@@ -367,6 +370,7 @@ func generateMarkdown(config KeyboardConfig) {
 		center(config.Letters["p"], 3), config.SpecialKeys["open_bracket"], config.SpecialKeys["close_bracket"],
 		center(config.SpecialKeys["backslash"], 8),
 	)
+
 	thirdRow := fmt.Sprintf("| CAPS | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |      %s      |\n",
 		center(config.Letters["a"], 3), center(config.Letters["s"], 3), center(config.Letters["d"], 3),
 		center(config.Letters["f"], 3), center(config.Letters["g"], 3), center(config.Letters["h"], 3),
