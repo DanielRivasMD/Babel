@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ttacon/chalk"
 	// "github.com/ttacon/chalk"
 	// "olympos.io/encoding/edn"
 )
@@ -69,32 +71,25 @@ func parse() {
 	config := initConfig()
 
 	// For example, assume filePath is passed in or defined here.
-	filePath := "your_edn_file.edn"
-	if err := updateConfigFromFile(config, filePath); err != nil {
+	// filePath := "your_edn_file.edn"
+	if err := updateConfigFromFile(config, ednFile); err != nil {
 		fmt.Printf("Error reading EDN file: %v\n", err)
 		return
 	}
+
+	generateMarkdown(config)
 
 	// Example output
 	for k, v := range config {
 		fmt.Printf("Key: %s, kode: %s, commented: %v\n", k, v.kode, v.commented)
 	}
+
+	if verbose {
+		fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
+		fmt.Printf("Output: %s/%s\n", OutputDir, OutputFile)
+	}
+
 }
-
-// 	// ednFile is assumed declared externally.
-// 	config := parseEdnConfig(ednFile)
-// 	// Dump configuration maps for debugging.
-// 	// fmt.Println("[DEBUG] Letters:", config.Letters)
-// 	// fmt.Println("[DEBUG] Numbers:", config.Numbers)
-// 	// fmt.Println("[DEBUG] SpecialKeys:", config.SpecialKeys)
-
-// 	generateMarkdown(config)
-
-// 	if verbose {
-// 		fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
-// 		fmt.Printf("Output: %s/%s\n", OutputDir, OutputFile)
-// 	}
-// }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -154,25 +149,44 @@ func updateConfigFromFile(config map[string]KeyConfig, filePath string) error {
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "  [:!"+TC+"#P") {
+			fmt.Println(line)
 			// Split by whitespace.
 			fieldsSpace := strings.Fields(line)
+			// fmt.Println(len(fieldsSpace))
 			if len(fieldsSpace) < 4 {
 				continue // not enough fields; skip.
 			}
 			// keys[2] should be like ":!TC#P<key>".
-			parts := strings.Split(fieldsSpace[2], "#P")
+			parts := strings.Split(fieldsSpace[0], "#P")
+			// fmt.Println(fieldsSpace[0])
+			// fmt.Println(parts)
+			// fmt.Println(len(parts))
 			if len(parts) < 2 {
 				continue
 			}
 			key := parts[1]
+			key = strings.TrimSuffix(key, "]")
 			// Check for comment: if splitting the original line by ';' yields 3 or more fields.
 			fieldsSemi := strings.Split(line, ";")
 			hasComment := len(fieldsSemi) >= 3
+			// fmt.Println(hasComment)
 
 			// We must fetch the KeyConfig, modify it, then reassign it.
 			if kc, ok := config[key]; ok {
-				kc.kode = fieldsSpace[3]
+				fmt.Println(fieldsSpace)
+
+				kode := fieldsSpace[1]
+				kode = strings.TrimSuffix(kode, "]")
+				kode = strings.TrimSuffix(kode, "]")
+				kode = strings.TrimPrefix(kode, "[:")
+				kode = strings.TrimPrefix(kode, "!")
+
 				kc.commented = hasComment
+				if kc.commented {
+					kc.kode = chalk.Bold.TextStyle(chalk.Yellow.Color(kode))
+				} else {
+					kc.kode = chalk.Bold.TextStyle(chalk.Cyan.Color(kode))
+				}
 				config[key] = kc
 			} else {
 				// Optionally, handle keys not present in the map.
@@ -304,7 +318,7 @@ func generateMarkdown(config map[string]KeyConfig) {
 	}
 
 	markdownStart := fmt.Sprintf(`# Dynamic Keyboard Layout
-*Generated with TC='%s'*
+*Generated*
 
 `)
 	codeFenceStart := "```markdown\n"
