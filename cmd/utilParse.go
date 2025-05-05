@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
+	"github.com/ttacon/chalk"
 	"olympos.io/encoding/edn"
 )
 
@@ -14,7 +16,7 @@ var TC = "TC"
 // ednFile is assumed to be declared externally.
 
 const (
-	DefaultKey = " - "
+	DefaultKey = " "
 	OutputDir  = "layouts"
 	OutputFile = "keyboard_layout.md"
 )
@@ -48,8 +50,11 @@ func parse() {
 	// fmt.Println("[DEBUG] SpecialKeys:", config.SpecialKeys)
 
 	generateMarkdown(config)
-	fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
-	fmt.Printf("Output: %s/%s\n", OutputDir, OutputFile)
+
+	if verbose {
+		fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
+		fmt.Printf("Output: %s/%s\n", OutputDir, OutputFile)
+	}
 }
 
 func parseEdnConfig(filePath string) KeyboardConfig {
@@ -61,8 +66,6 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 	if err := edn.Unmarshal(file, &raw); err != nil {
 		panic(fmt.Sprintf("Error parsing EDN: %v", err))
 	}
-	// fmt.Printf("[DEBUG] Type of raw: %T\n", raw)
-	// fmt.Println("[DEBUG] Raw:", raw)
 
 	// Merge multiple EDN documents if needed.
 	var docs []map[edn.Keyword]interface{}
@@ -194,7 +197,7 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 				expected := fmt.Sprintf("!%s#P%s", TC, letter)
 				if keyStr == expected {
 					val := formatEdnValue(value)
-					config.Letters[letter] = val
+					config.Letters[letter] = chalk.Red.Color(val)
 					// fmt.Printf("[DEBUG] Found letter mapping: %s -> %s\n", letter, val)
 					break
 				}
@@ -211,92 +214,121 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 				}
 			}
 
-			// // Process special keys (using substring matching).
-			if strings.Contains(keyStr, "Phyphen") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["hyphen"] = val
-				// fmt.Printf("[DEBUG] Found mapping for hyphen -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pequal_sign") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["equal_sign"] = val
-				// fmt.Printf("[DEBUG] Found mapping for equal_sign -> %s\n", val)
-			} else if strings.Contains(keyStr, "Popen_bracket") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["open_bracket"] = val
-				// fmt.Printf("[DEBUG] Found mapping for open_bracket -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pclose_bracket") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["close_bracket"] = val
-				// fmt.Printf("[DEBUG] Found mapping for close_bracket -> %s\n", val)
-			} else if strings.Contains(keyStr, "Psemicolon") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["semicolon"] = val
-				// fmt.Printf("[DEBUG] Found mapping for semicolon -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pquote") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["quote"] = val
-				// fmt.Printf("[DEBUG] Found mapping for quote -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pbackslash") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["backslash"] = val
-				// fmt.Printf("[DEBUG] Found mapping for backslash -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pcomma") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["comma"] = val
-				// fmt.Printf("[DEBUG] Found mapping for comma -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pperiod") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["period"] = val
-				// fmt.Printf("[DEBUG] Found mapping for period -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pslash") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["slash"] = val
-				// fmt.Printf("[DEBUG] Found mapping for slash -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pdelete_or_backspace") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["delete_or_backspace"] = val
-				// fmt.Printf("[DEBUG] Found mapping for delete_or_backspace -> %s\n", val)
-			} else if strings.Contains(keyStr, "Preturn_or_enter") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["return_or_enter"] = val
-				// fmt.Printf("[DEBUG] Found mapping for return_or_enter -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pright_shift") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["right_shift"] = val
-				// fmt.Printf("[DEBUG] Found mapping for right_shift -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pright_option") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["right_option"] = val
-				// fmt.Printf("[DEBUG] Found mapping for right_option -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pright_command") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["right_command"] = val
-				// fmt.Printf("[DEBUG] Found mapping for right_command -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pspacebar") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["spacebar"] = val
-				// fmt.Printf("[DEBUG] Found mapping for spacebar -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pleft_arrow") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["left_arrow"] = val
-				// fmt.Printf("[DEBUG] Found mapping for left_arrow -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pright_arrow") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["right_arrow"] = val
-				// fmt.Printf("[DEBUG] Found mapping for right_arrow -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pup_arrow") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["up_arrow"] = val
-				// fmt.Printf("[DEBUG] Found mapping for up_arrow -> %s\n", val)
-			} else if strings.Contains(keyStr, "Pdown_arrow") {
-				val := formatEdnValue(value)
-				config.SpecialKeys["down_arrow"] = val
-				// fmt.Printf("[DEBUG] Found mapping for down_arrow -> %s\n", val)
+			// Build the comment map from the raw EDN file.
+			commentMap := buildCommentMap(ednFile)
+			fmt.Println(commentMap)
+
+			// Define the list of target substrings for special keys.
+			specialTargets := []string{
+				"Phyphen",     // will become "hyphen"
+				"Pequal_sign", // will become "equal_sign"
+				"Popen_bracket",
+				"Pclose_bracket",
+				"Psemicolon",
+				"Pquote",
+				"Pbackslash",
+				"Pcomma",
+				"Pperiod",
+				"Pslash",
+				"Pdelete_or_backspace",
+				"Preturn_or_enter",
+				"Pright_shift",
+				"Pright_option",
+				"Pright_command",
+				"Pspacebar",
+				"Pleft_arrow",
+				"Pright_arrow",
+				"Pup_arrow",
+				"Pdown_arrow",
+			}
+
+			for _, rule := range rules {
+				ruleList, ok := rule.([]interface{})
+				if !ok || len(ruleList) < 2 {
+					continue
+				}
+				key, ok := ruleList[0].(edn.Keyword)
+				if !ok {
+					continue
+				}
+				keyStr := string(key)
+				value := ruleList[1]
+
+				// Process letter keys and number keys separately (as before)...
+
+				// Process special keys:
+				for _, target := range specialTargets {
+					if processSpecialMapping(&config, commentMap, keyStr, value, target) {
+						break // if a special map was processed, no need to continue for this rule.
+					}
+				}
 			}
 		}
 	}
 	config.UsedTcPrefix = TC
 	return config
+}
+
+func buildCommentMap(filePath string) map[string]bool {
+	commentMap := make(map[string]bool)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return commentMap // return an empty map on error
+	}
+	lines := strings.Split(string(data), "\n")
+	// This regex captures the key following "[:!TC#P" until a space, semicolon, or closing bracket.
+	ruleKeyRe := regexp.MustCompile(`
+
+\[:!` + TC + `#P([^ ;\]
+
+]+)`)
+	for _, line := range lines {
+		if strings.Contains(line, "[:!"+TC+"#P") {
+			fields := strings.Split(line, ";")
+			// If there are more than three fields, we consider the rule as having an extra comment.
+			hasComment := len(fields) > 3
+			matches := ruleKeyRe.FindStringSubmatch(line)
+			if len(matches) >= 2 {
+				key := matches[1] // e.g. "delete_or_backspace", "return_or_enter", etc.
+				commentMap[key] = hasComment
+			}
+		}
+	}
+	return commentMap
+}
+
+// derivedKey converts a target like "Phyphen" or "Popen_bracket" into the final config key.
+func derivedKey(target string) string {
+	if strings.HasPrefix(target, "P") {
+		return strings.TrimPrefix(target, "P")
+	}
+	return target
+}
+
+// processSpecialMapping processes a special key if keyStr contains the target substring.
+// It uses commentMap (built from the EDN file) to decide if the current rule is commented.
+// If commented, it uses bold yellow coloring; otherwise, bold cyan.
+// Returns true if a mapping is performed.
+func processSpecialMapping(config *KeyboardConfig, commentMap map[string]bool, keyStr string, value interface{}, target string) bool {
+	if strings.Contains(keyStr, target) {
+		dk := derivedKey(target)
+		hasComment := false
+		if v, ok := commentMap[dk]; ok {
+			hasComment = v
+		}
+		s := formatEdnValue(value)
+		var colored string
+		if hasComment {
+			// If commented, use bold yellow.
+			colored = chalk.Bold.TextStyle(chalk.Yellow.Color(s))
+		} else {
+			// Otherwise, use bold cyan.
+			colored = chalk.Bold.TextStyle(chalk.Cyan.Color(s))
+		}
+		config.SpecialKeys[dk] = colored
+		return true
+	}
+	return false
 }
 
 func formatEdnValue(value interface{}) string {
