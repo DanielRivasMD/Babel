@@ -26,6 +26,7 @@ import (
 // declarations
 var (
 	ednFile string
+	verbose bool
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,6 +57,7 @@ func init() {
 
 	// flags
 	parseednCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Utility to import. First letter must be capitalized.")
+	parseednCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
