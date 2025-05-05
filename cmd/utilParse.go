@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	"github.com/ttacon/chalk"
-	// "github.com/ttacon/chalk"
-	// "olympos.io/encoding/edn"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,13 +52,6 @@ type Term struct {
 	description string
 }
 
-// type KeyboardConfig struct {
-// 	Letters      map[string]KeyConfig
-// 	Numbers      map[string]KeyConfig
-// 	SpecialKeys  map[string]KeyConfig
-// 	UsedTcPrefix string
-// }
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func parse() {
@@ -78,11 +69,6 @@ func parse() {
 	}
 
 	generateMarkdown(config)
-
-	// Example output
-	for k, v := range config {
-		fmt.Printf("Key: %s, kode: %s, commented: %v\n", k, v.kode, v.commented)
-	}
 
 	if verbose {
 		fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
@@ -149,31 +135,28 @@ func updateConfigFromFile(config map[string]KeyConfig, filePath string) error {
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "  [:!"+TC+"#P") {
-			fmt.Println(line)
+
 			// Split by whitespace.
 			fieldsSpace := strings.Fields(line)
-			// fmt.Println(len(fieldsSpace))
 			if len(fieldsSpace) < 4 {
 				continue // not enough fields; skip.
 			}
+
 			// keys[2] should be like ":!TC#P<key>".
 			parts := strings.Split(fieldsSpace[0], "#P")
-			// fmt.Println(fieldsSpace[0])
-			// fmt.Println(parts)
-			// fmt.Println(len(parts))
 			if len(parts) < 2 {
 				continue
 			}
+
 			key := parts[1]
 			key = strings.TrimSuffix(key, "]")
 			// Check for comment: if splitting the original line by ';' yields 3 or more fields.
 			fieldsSemi := strings.Split(line, ";")
+
 			hasComment := len(fieldsSemi) >= 3
-			// fmt.Println(hasComment)
 
 			// We must fetch the KeyConfig, modify it, then reassign it.
 			if kc, ok := config[key]; ok {
-				fmt.Println(fieldsSpace)
 
 				kode := fieldsSpace[1]
 				kode = strings.TrimSuffix(kode, "]")
@@ -196,26 +179,6 @@ func updateConfigFromFile(config map[string]KeyConfig, filePath string) error {
 	}
 	return nil
 }
-
-// func parseEdnConfig(filePath string) map[string]KeyConfig {
-// 	// TODO: refactor logic => read line by line
-// 	// TODO: refactor logic => initialize config
-
-// 	// Initialize the configuration.
-// 	config := initConfig()
-
-// 	// For example, assume filePath is passed in or defined here.
-// 	// filePath := "your_edn_file.edn"
-// 	if err := updateConfigFromFile(config, filePath); err != nil {
-// 		fmt.Printf("Error reading EDN file: %v\n", err)
-// 		// return
-// 	}
-
-// 	// Example output
-// 	for k, v := range config {
-// 		fmt.Printf("Key: %s, kode: %s, commented: %v\n", k, v.kode, v.commented)
-// 	}
-// }
 
 func buildCommentMap(filePath string) map[string]bool {
 	commentMap := make(map[string]bool)
@@ -247,32 +210,6 @@ func derivedKey(target string) string {
 	}
 	return target
 }
-
-// // processSpecialMapping processes a special key if keyStr contains the target substring.
-// // It uses commentMap (built from the EDN file) to decide if the current rule is commented.
-// // If commented, it uses bold yellow coloring; otherwise, bold cyan.
-// // Returns true if a mapping is performed.
-// func processSpecialMapping(config *KeyboardConfig, commentMap map[string]bool, keyStr string, value interface{}, target string) bool {
-// 	if strings.Contains(keyStr, target) {
-// 		dk := derivedKey(target)
-// 		hasComment := false
-// 		if v, ok := commentMap[dk]; ok {
-// 			hasComment = v
-// 		}
-// 		s := formatEdnValue(value)
-// 		var colored string
-// 		if hasComment {
-// 			// If commented, use bold yellow.
-// 			colored = chalk.Bold.TextStyle(chalk.Yellow.Color(s))
-// 		} else {
-// 			// Otherwise, use bold cyan.
-// 			colored = chalk.Bold.TextStyle(chalk.Cyan.Color(s))
-// 		}
-// 		config.SpecialKeys[dk] = colored
-// 		return true
-// 	}
-// 	return false
-// }
 
 // extractMappingComments extracts mapping comments using a regular expression that captures the key name.
 func extractMappingComments(filePath string) []string {
