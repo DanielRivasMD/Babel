@@ -39,6 +39,20 @@ var mappingLabels = map[string]string{
 	// TODO: add lefts
 }
 
+type KeyConfig struct {
+	key       string
+	kode      string
+	intrepret string
+	app       string
+	commented bool
+	term      []Term
+}
+
+type Term struct {
+	app         string
+	description string
+}
+
 type KeyboardConfig struct {
 	Letters      map[string]string
 	Numbers      map[string]string
@@ -49,6 +63,9 @@ type KeyboardConfig struct {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func parse() {
+	// TODO: high level: parse edn => read file line by line to extract values. mount on structs to indicate config & color
+	// TODO: high level: generate markdown => extract values mounted on structs
+
 	// ednFile is assumed declared externally.
 	config := parseEdnConfig(ednFile)
 	// Dump configuration maps for debugging.
@@ -67,6 +84,8 @@ func parse() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func parseEdnConfig(filePath string) KeyboardConfig {
+	// TODO: refactor logic => read line by line
+	// TODO: refactor logic => initialize config
 	file, err := os.ReadFile(filePath)
 	if err != nil {
 		panic(fmt.Sprintf("Error reading EDN file: %v", err))
@@ -146,8 +165,6 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 	for _, d := range digitKeys {
 		config.Numbers[d] = DefaultKey
 	}
-	config.Numbers["-"] = DefaultKey
-	config.Numbers["="] = DefaultKey
 
 	// Initialize special keys.
 	specialKeys := []string{
@@ -516,3 +533,5 @@ func getArrowMappings(config KeyboardConfig) string {
 	}
 	return strings.Join(mappings, ", ")
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
