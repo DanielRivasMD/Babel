@@ -1,14 +1,19 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 package cmd
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/ttacon/chalk"
 	"olympos.io/encoding/edn"
 )
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Package-level variable for the TC prefix.
 var TC = "TC"
@@ -41,6 +46,8 @@ type KeyboardConfig struct {
 	UsedTcPrefix string
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func parse() {
 	// ednFile is assumed declared externally.
 	config := parseEdnConfig(ednFile)
@@ -56,6 +63,8 @@ func parse() {
 		fmt.Printf("Output: %s/%s\n", OutputDir, OutputFile)
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func parseEdnConfig(filePath string) KeyboardConfig {
 	file, err := os.ReadFile(filePath)
@@ -115,9 +124,11 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 		docs = append(docs, convMap)
 		// fmt.Printf("[DEBUG] Raw (interface{} keys): %#v\n", docs)
 	default:
+		// TODO: error out gracefully
 		fmt.Println("nothing matching")
 	}
 
+	// TODO: wrap initialization elements into function
 	// Initialize configuration.
 	config := KeyboardConfig{
 		Letters:     make(map[string]string),
@@ -216,7 +227,6 @@ func parseEdnConfig(filePath string) KeyboardConfig {
 
 			// Build the comment map from the raw EDN file.
 			commentMap := buildCommentMap(ednFile)
-			fmt.Println(commentMap)
 
 			// Define the list of target substrings for special keys.
 			specialTargets := []string{
@@ -277,19 +287,14 @@ func buildCommentMap(filePath string) map[string]bool {
 	}
 	lines := strings.Split(string(data), "\n")
 	// This regex captures the key following "[:!TC#P" until a space, semicolon, or closing bracket.
-	ruleKeyRe := regexp.MustCompile(`
-
-\[:!` + TC + `#P([^ ;\]
-
-]+)`)
 	for _, line := range lines {
-		if strings.Contains(line, "[:!"+TC+"#P") {
-			fields := strings.Split(line, ";")
-			// If there are more than three fields, we consider the rule as having an extra comment.
-			hasComment := len(fields) > 3
-			matches := ruleKeyRe.FindStringSubmatch(line)
-			if len(matches) >= 2 {
-				key := matches[1] // e.g. "delete_or_backspace", "return_or_enter", etc.
+		if strings.Contains(line, "  [:!"+TC+"#P") {
+			keys := strings.Split(line, " ")
+			if len(keys) >= 2 {
+				key := strings.Split(keys[2], "#P")[1]
+				fields := strings.Split(line, ";")
+				// If there are more than three fields, we consider the rule as having an extra comment.
+				hasComment := len(fields) >= 3
 				commentMap[key] = hasComment
 			}
 		}
