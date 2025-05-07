@@ -45,6 +45,7 @@ var parseednCmd = &cobra.Command{
 
 	Run: func(κ *cobra.Command, args []string) {
 
+		// TODO: add flag to pass scripts at config address
 		parse()
 	},
 }
