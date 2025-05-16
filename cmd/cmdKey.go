@@ -31,9 +31,9 @@ var (
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// parseednCmd
-var parseednCmd = &cobra.Command{
-	Use:   "parseedn",
+// keyCmd
+var keyCmd = &cobra.Command{
+	Use:   "key",
 	Short: "" + chalk.Yellow.Color("") + ".",
 	Long: chalk.Green.Color(chalk.Bold.TextStyle("Daniel Rivas ")) + chalk.Dim.TextStyle(chalk.Italic.TextStyle("<danielrivasmd@gmail.com>")) + `
 `,
@@ -54,11 +54,11 @@ var parseednCmd = &cobra.Command{
 
 // execute prior main
 func init() {
-	rootCmd.AddCommand(parseednCmd)
+	rootCmd.AddCommand(keyCmd)
 
 	// flags
-	parseednCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Utility to import. First letter must be capitalized.")
-	parseednCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose")
+	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Utility to import. First letter must be capitalized.")
+	keyCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
