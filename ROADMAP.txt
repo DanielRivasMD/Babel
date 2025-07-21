@@ -1,0 +1,4 @@
+- render keyboard for desired hotkey combination, for example: `ctl-cmd`
+- search for keyboard shortcut for given action on app, for example: open file in helix
+- search for keyboard shortcut output, for example: where is `Tf`
+- sort & list keymaps so it is easier to understand empty
