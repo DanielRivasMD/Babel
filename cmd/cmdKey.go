@@ -13,6 +13,8 @@ GNU General Public License for more details.
 */
 package cmd
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 import (
 	"fmt"
 	"log"
@@ -25,68 +27,83 @@ import (
 	"olympos.io/encoding/edn"
 )
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 var (
 	ednFile string
 	verbose bool
 )
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 var keyCmd = &cobra.Command{
 	Use:   "key",
-	Short: chalk.Yellow.Color("Generate keybinding docs"),
-	Long: chalk.Green.Color(chalk.Bold.TextStyle("Daniel Rivas ")) +
-		chalk.Dim.TextStyle(chalk.Italic.TextStyle("<danielrivasmd@gmail.com>")) + "\n",
+	Short: chalk.Yellow.Color("Generate keybinding docs as Markdown"),
+	Long:  chalk.Green.Color(chalk.Bold.TextStyle("babel key")) + " scans your EDN metadata + vector rules and emits a 4-column Markdown table.\n",
 	Example: `
   babel key --file ~/.saiyajin/frag/simple/lctlcmd.edn`,
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	Run: func(cmd *cobra.Command, args []string) {
 		generateKeyDocs()
 	},
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func init() {
 	rootCmd.AddCommand(keyCmd)
 	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
-	keyCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
+	keyCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose debug output")
 }
 
-// generateKeyDocs reads the EDN file, scans out ^{…} metadata + the next
-// vector, dumps both for you, then emits Markdown.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func generateKeyDocs() {
 	if ednFile == "" {
 		log.Fatal("🚨 please pass --file <path>.edn")
 	}
 
-	// 1) Slurp the file
 	data, err := os.ReadFile(ednFile)
 	if err != nil {
 		log.Fatalf("failed to read %s: %v", ednFile, err)
 	}
 	text := string(data)
 
-	// DEBUG: how many carets did we see at all?
 	totalCarets := strings.Count(text, "^")
-	fmt.Printf("🛠️  Debug: found %d '^' carets in %s\n\n", totalCarets, ednFile)
+	if verbose {
+		fmt.Printf("🛠️  Debug: found %d '^' carets in %s\n\n", totalCarets, ednFile)
+	}
+
+	type Row struct {
+		Program    string
+		Action     string
+		Trigger    string
+		Keybinding string
+	}
+	var rows []Row
 
 	pos := 0
 	for {
-		// 2) locate the next caret
+		// 1) find next '^'
 		delta := strings.IndexRune(text[pos:], '^')
 		if delta < 0 {
 			break
 		}
 		i := pos + delta
 
-		// 3) skip any whitespace after '^'
+		// 2) skip whitespace, expect '{'
 		j := i + 1
 		for j < len(text) && unicode.IsSpace(rune(text[j])) {
 			j++
 		}
 		if j >= len(text) || text[j] != '{' {
-			// not actually metadata
 			pos = i + 1
 			continue
 		}
 
-		// 4) extract the metadata map literal
+		// 3) extract metadata map literal
 		metaStart := j
 		braceCount := 0
 		k := j
@@ -98,18 +115,18 @@ func generateKeyDocs() {
 			case '}':
 				braceCount--
 				if braceCount == 0 {
-					k++ // include the closing brace
+					k++ // include closing brace
 					break metaLoop
 				}
 			}
 		}
 		if braceCount != 0 || k > len(text) {
-			break // unmatched braces, bail out
+			break
 		}
 		metaEnd := k
 		metadataStr := text[metaStart:metaEnd]
 
-		// 5) skip whitespace (newlines, spaces) to the vector '['
+		// 4) skip to '['
 		p := metaEnd
 		for p < len(text) && unicode.IsSpace(rune(text[p])) {
 			p++
@@ -119,7 +136,7 @@ func generateKeyDocs() {
 			continue
 		}
 
-		// 6) extract the vector literal
+		// 5) extract the vector literal
 		vecStart := p
 		bracketCount := 0
 		q := p
@@ -131,40 +148,34 @@ func generateKeyDocs() {
 			case ']':
 				bracketCount--
 				if bracketCount == 0 {
-					q++ // include the closing bracket
+					q++ // include closing bracket
 					break vecLoop
 				}
 			}
 		}
 		if bracketCount != 0 || q > len(text) {
-			break // unmatched brackets
+			break
 		}
 		vecEnd := q
 		ruleStr := text[vecStart:vecEnd]
-
-		// advance scan cursor
 		pos = vecEnd
 
-		// ------------------------------------------------------------
-		// Now decode + dump what we found:
-		// ------------------------------------------------------------
-
-		// A) Unmarshal metadata
+		// 6) unmarshal metadata
 		var rawMeta map[edn.Keyword]interface{}
 		if err := edn.Unmarshal([]byte(metadataStr), &rawMeta); err != nil {
 			log.Fatalf("EDN metadata unmarshal error: %v", err)
 		}
 
-		// DEBUG: show exactly what metadataStr and rawMeta we got
-		fmt.Println("-------")
-		fmt.Println("metadataStr:", metadataStr)
-		fmt.Println("rawMeta:")
-		for key, val := range rawMeta {
-			fmt.Printf("  %s => %#v\n", string(key), val)
-		}
-		fmt.Println()
+		// // DEBUG: show exactly what metadataStr and rawMeta we got
+		// fmt.Println("-------")
+		// fmt.Println("metadataStr:", metadataStr)
+		// fmt.Println("rawMeta:")
+		// for key, val := range rawMeta {
+		// 	fmt.Printf("  %s => %#v\n", string(key), val)
+		// }
+		// fmt.Println()
 
-		// B) Decode the vector form
+		// 7) decode the vector form
 		var raw interface{}
 		dec := edn.NewDecoder(strings.NewReader(ruleStr))
 		if err := dec.Decode(&raw); err != nil {
@@ -175,47 +186,87 @@ func generateKeyDocs() {
 			continue
 		}
 
-		// 1) Trigger keyword
-		trigger, _ := vec[0].(edn.Keyword)
-		fmt.Printf("## %s\n\n", string(trigger))
+		// 8) human-readable trigger
+		triggerRaw, _ := vec[0].(edn.Keyword)
+		t := string(triggerRaw)
+		t = strings.TrimPrefix(t, "!")
+		parts := strings.SplitN(t, "#", 2) // ["TC", "Pleft_arrow"]
+		group := parts[0]
+		namePart := ""
+		if len(parts) > 1 {
+			namePart = parts[1]
+		}
+		namePart = strings.TrimPrefix(namePart[1:], "P")
+		trigger := fmt.Sprintf("%s %s", group, namePart)
 
-		// 2) Key sequence
-		keySeqVal := vec[1]
+		// 9) keybinding sequence
 		var keySeq string
-		if kv, ok := keySeqVal.([]interface{}); ok {
-			parts := make([]string, len(kv))
+		if kv, ok := vec[1].([]interface{}); ok {
+			seq := make([]string, len(kv))
 			for i, e := range kv {
-				if kw, ok := e.(edn.Keyword); ok {
-					parts[i] = string(kw)
-				} else {
-					parts[i] = fmt.Sprint(e)
-				}
+				seq[i] = fmt.Sprint(e)
 			}
-			keySeq = strings.Join(parts, " ")
+			keySeq = strings.Join(seq, " ")
 		} else {
-			keySeq = fmt.Sprint(keySeqVal)
+			keySeq = fmt.Sprint(vec[1])
 		}
-		fmt.Printf("- Keys: `%s`\n", keySeq)
 
-		// 3) :doc/actions
-		rawActs, has := rawMeta[edn.Keyword(":doc/actions")]
-		if has {
+		// 10) collect rows for each :doc/actions
+		if rawActs, found := rawMeta[edn.Keyword("doc/actions")]; found {
 			if acts, ok := rawActs.([]interface{}); ok {
-				fmt.Println("- Actions:")
 				for _, a := range acts {
-					if amap, ok := a.(map[edn.Keyword]interface{}); ok {
-						name, prog := "", ""
-						if v, ok := amap[edn.Keyword(":name")]; ok {
-							name = fmt.Sprint(v)
-						}
-						if v, ok := amap[edn.Keyword(":program")]; ok {
-							prog = fmt.Sprint(v)
-						}
-						fmt.Printf("  - `%s` via `%s`\n", name, prog)
+					// 1) Assert to the raw generic map
+					rawMap, ok := a.(map[interface{}]interface{})
+					if !ok {
+						continue
 					}
+
+					// 2) Extract your fields by converting each key
+					var actionName, prog string
+
+					// helper to fetch and fmt.Sprint any value
+					fetch := func(k interface{}) (string, bool) {
+						if v, exists := rawMap[k]; exists {
+							return fmt.Sprint(v), true
+						}
+						return "", false
+					}
+
+					// check both edn.Keyword and string forms
+					if name, ok := fetch(edn.Keyword("name")); ok {
+						actionName = name
+					} else if name, ok := fetch("name"); ok {
+						actionName = name
+					}
+
+					if pr, ok := fetch(edn.Keyword("program")); ok {
+						prog = pr
+					} else if pr, ok := fetch("program"); ok {
+						prog = pr
+					}
+
+					rows = append(rows, Row{
+						Program:    prog,
+						Action:     actionName,
+						Trigger:    trigger,
+						Keybinding: keySeq,
+					})
 				}
 			}
 		}
-		fmt.Println()
+	}
+
+	// 11) emit the Markdown table
+	if len(rows) == 0 {
+		fmt.Println("No keybindings found.")
+		return
+	}
+	fmt.Println("| Program | Action      | Trigger        | Keybinding |")
+	fmt.Println("|---------|-------------|----------------|------------|")
+	for _, r := range rows {
+		fmt.Printf("| %-7s | %-11s | %-14s | %-10s |\n",
+			r.Program, r.Action, r.Trigger, r.Keybinding)
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
