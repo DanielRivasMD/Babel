@@ -1,3 +1,6 @@
+- integrate a master config in `toml`
+- transpile to karabiner `json` directly
+- transpile to other files, for example, `toml` to `toml`
 - render keyboard for desired hotkey combination, for example: `ctl-cmd`
 - search for keyboard shortcut for given action on app, for example: open file in helix
 - search for keyboard shortcut output, for example: where is `Tf`
