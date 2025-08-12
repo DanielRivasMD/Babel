@@ -62,7 +62,7 @@ func init() {
 
 func generateKeyDocs() {
 	if ednFile == "" {
-		log.Fatal("🚨 please pass --file <path>.edn")
+		log.Fatal("please pass --file <path>.edn")
 	}
 
 	data, err := os.ReadFile(ednFile)
@@ -73,7 +73,7 @@ func generateKeyDocs() {
 
 	totalCarets := strings.Count(text, "^")
 	if verbose {
-		fmt.Printf("🛠️  Debug: found %d '^' carets in %s\n\n", totalCarets, ednFile)
+		fmt.Printf("Debug: found %d '^' carets in %s\n\n", totalCarets, ednFile)
 	}
 
 	type Row struct {
@@ -161,7 +161,7 @@ func generateKeyDocs() {
 		pos = vecEnd
 
 		// 6) unmarshal metadata
-		var rawMeta map[edn.Keyword]interface{}
+		var rawMeta map[edn.Keyword]any
 		if err := edn.Unmarshal([]byte(metadataStr), &rawMeta); err != nil {
 			log.Fatalf("EDN metadata unmarshal error: %v", err)
 		}
@@ -176,12 +176,12 @@ func generateKeyDocs() {
 		// fmt.Println()
 
 		// 7) decode the vector form
-		var raw interface{}
+		var raw any
 		dec := edn.NewDecoder(strings.NewReader(ruleStr))
 		if err := dec.Decode(&raw); err != nil {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
-		vec, ok := raw.([]interface{})
+		vec, ok := raw.([]any)
 		if !ok || len(vec) < 2 {
 			continue
 		}
@@ -201,7 +201,7 @@ func generateKeyDocs() {
 
 		// 9) keybinding sequence
 		var keySeq string
-		if kv, ok := vec[1].([]interface{}); ok {
+		if kv, ok := vec[1].([]any); ok {
 			seq := make([]string, len(kv))
 			for i, e := range kv {
 				seq[i] = fmt.Sprint(e)
@@ -213,10 +213,10 @@ func generateKeyDocs() {
 
 		// 10) collect rows for each :doc/actions
 		if rawActs, found := rawMeta[edn.Keyword("doc/actions")]; found {
-			if acts, ok := rawActs.([]interface{}); ok {
+			if acts, ok := rawActs.([]any); ok {
 				for _, a := range acts {
 					// 1) Assert to the raw generic map
-					rawMap, ok := a.(map[interface{}]interface{})
+					rawMap, ok := a.(map[any]any)
 					if !ok {
 						continue
 					}
@@ -225,7 +225,7 @@ func generateKeyDocs() {
 					var actionName, prog string
 
 					// helper to fetch and fmt.Sprint any value
-					fetch := func(k interface{}) (string, bool) {
+					fetch := func(k any) (string, bool) {
 						if v, exists := rawMap[k]; exists {
 							return fmt.Sprint(v), true
 						}
