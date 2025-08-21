@@ -77,10 +77,11 @@ func generateKeyDocs() {
 	}
 
 	type Row struct {
-		Program    string
-		Action     string
-		Trigger    string
-		Keybinding string
+		Description string
+		Program     string
+		Action      string
+		Trigger     string
+		Keybinding  string
 	}
 	var rows []Row
 
@@ -222,7 +223,7 @@ func generateKeyDocs() {
 					}
 
 					// 2) Extract your fields by converting each key
-					var actionName, prog string
+					var actionName, prog, description string
 
 					// helper to fetch and fmt.Sprint any value
 					fetch := func(k any) (string, bool) {
@@ -245,11 +246,18 @@ func generateKeyDocs() {
 						prog = pr
 					}
 
+					if ds, ok := fetch(edn.Keyword("description")); ok {
+						description = ds
+					} else if ds, ok := fetch("description"); ok {
+						description = ds
+					}
+
 					rows = append(rows, Row{
-						Program:    prog,
-						Action:     actionName,
-						Trigger:    trigger,
-						Keybinding: keySeq,
+						Description: description,
+						Program:     prog,
+						Action:      actionName,
+						Trigger:     trigger,
+						Keybinding:  keySeq,
 					})
 				}
 			}
@@ -264,8 +272,8 @@ func generateKeyDocs() {
 	fmt.Println("| Program | Action      | Trigger        | Keybinding |")
 	fmt.Println("|---------|-------------|----------------|------------|")
 	for _, r := range rows {
-		fmt.Printf("| %-7s | %-11s | %-14s | %-10s |\n",
-			r.Program, r.Action, r.Trigger, r.Keybinding)
+		fmt.Printf("| %-7s | %-11s | %-14s | %-10s | %s\n",
+			r.Program, r.Action, r.Trigger, r.Keybinding, r.Description)
 	}
 }
 
