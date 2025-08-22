@@ -1,7 +1,9 @@
-- integrate a master config in `toml`
-- transpile to karabiner `json` directly
-- transpile to other files, for example, `toml` to `toml`
-- render keyboard for desired hotkey combination, for example: `ctl-cmd`
-- search for keyboard shortcut for given action on app, for example: open file in helix
-- search for keyboard shortcut output, for example: where is `Tf`
-- sort & list keymaps so it is easier to understand empty
+- use `edn` as the master config
+- transpile to other files, for example, `toml` & `yaml`
+- render keyboard for desired hotkey combination, for example: `ctl-cmd` => `babel render`
+- search for keyboard shortcut for given action on app, for example: open file in helix => `babel query`
+- search for keyboard shortcut output, for example: where is `Tf` => `babel query`
+- sort & list keymaps so it is easier to understand empty => `babel table`
+- set up an automatic searcher based on root directory, for example: parse all `edn` files contained => `babel table`
+- use flags to filter per app, action, etc
+- implement TUI for `babel query`
