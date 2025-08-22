@@ -31,7 +31,6 @@ import (
 
 var (
 	ednFile string
-	verbose bool
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,7 +54,6 @@ var keyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(keyCmd)
 	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
-	keyCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose debug output")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
