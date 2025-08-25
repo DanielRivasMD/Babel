@@ -54,7 +54,6 @@ func init() {
 
 type Row struct {
 	Action      string
-	Description string
 	Command     string
 	Program     string
 
@@ -65,7 +64,6 @@ type Row struct {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func runKey(cmd *cobra.Command, args []string) {
-
 	validateArgs()
 	text := loadEDNFile(ednFile)
 
@@ -270,7 +268,6 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 		}
 		out = append(out, Row{
 			Action:      fetch(edn.Keyword("name")),
-			Description: fetch(edn.Keyword("description")),
 			Command:     fetch(edn.Keyword("exec")),
 			Program:     fetch(edn.Keyword("program")),
 			Trigger:     trigger,
@@ -286,12 +283,12 @@ func emitTable(rows []Row) {
 		fmt.Println("No keybindings found.")
 		return
 	}
-	fmt.Println("| Program      | Action            | Trigger  | Keybinding | Description                                        |")
-	fmt.Println("|--------------|-------------------|----------|------------|----------------------------------------------------|")
+	fmt.Println("| Program      | Action            | Trigger  | Keybinding |")
+	fmt.Println("|--------------|-------------------|----------|------------|")
 	for _, r := range rows {
 		fmt.Printf(
-			"| %-12s | %-17s | %-8s | %-10s | %-50s |\n",
-			r.Program, r.Action, r.Trigger, r.Keybinding, r.Description,
+			"| %-12s | %-17s | %-8s | %-10s |\n",
+			r.Program, r.Action, r.Trigger, r.Keybinding,
 		)
 	}
 }
