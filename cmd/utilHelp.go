@@ -36,4 +36,10 @@ var helpRoot = formatHelp(
 	"Interpret hotkeys into markdown keyboard visuals",
 )
 
+var helpKey = formatHelp(
+	"Daniel Rivas",
+	"danielrivasmd@gmail.com",
+	"Scan EDN metadata + vector rules & emit a 4-column Markdown table",
+)
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////

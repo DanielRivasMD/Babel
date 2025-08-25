@@ -23,31 +23,25 @@ import (
 	"unicode"
 
 	"github.com/spf13/cobra"
-	"github.com/ttacon/chalk"
 	"olympos.io/encoding/edn"
 )
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var keyCmd = &cobra.Command{
+	Use:     "key",
+	Short:   "Generate keybinding docs as Markdown",
+	Long:    helpKey,
+	Example: exampleKey,
+
+	Run: runKey,
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var (
 	ednFile string
 )
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var keyCmd = &cobra.Command{
-	Use:   "key",
-	Short: chalk.Yellow.Color("Generate keybinding docs as Markdown"),
-	Long:  chalk.Green.Color(chalk.Bold.TextStyle("babel key")) + " scans your EDN metadata + vector rules and emits a 4-column Markdown table.\n",
-	Example: `
-  babel key --file ~/.saiyajin/frag/simple/lctlcmd.edn`,
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	Run: func(cmd *cobra.Command, args []string) {
-		generateKeyDocs()
-	},
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -58,7 +52,7 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func generateKeyDocs() {
+func runKey(cmd *cobra.Command, args []string) {
 	if ednFile == "" {
 		log.Fatal("please pass --file <path>.edn")
 	}
