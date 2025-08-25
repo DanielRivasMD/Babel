@@ -63,6 +63,9 @@ type Row struct {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: add filter for program
+// TODO: add filter for non-empty (default), empty & full
+// TODO: add iteration for over all directories in config with default path
 func runKey(cmd *cobra.Command, args []string) {
 	validateArgs()
 	text := loadEDNFile(ednFile)
@@ -98,6 +101,7 @@ func runKey(cmd *cobra.Command, args []string) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // 1) validateArgs ensures --file was provided
+	// TODO: error handler needed => one-liner
 func validateArgs() {
 	if ednFile == "" {
 		log.Fatal("please pass --file <path>.edn")
@@ -105,6 +109,7 @@ func validateArgs() {
 }
 
 // 2) loadEDNFile reads the entire EDN file into a string
+	// TODO: error handler needed => one-liner
 func loadEDNFile(path string) string {
 	data, err := os.ReadFile(path)
 	if err != nil {

@@ -1,3 +1,4 @@
+- wire the babel generation with `lilith`
 - use `edn` as the master config
 - transpile to other files, for example, `toml` & `yaml`
 - render keyboard for desired hotkey combination, for example: `ctl-cmd` => `babel render`
@@ -7,3 +8,16 @@
 - set up an automatic searcher based on root directory, for example: parse all `edn` files contained => `babel table`
 - use flags to filter per app, action, etc
 - implement TUI for `babel query`
+
+==================================================
+cmd/cmdKey.go
+  line 66     TODO   add filter for program
+  line 67     TODO   add filter for non-empty (default), empty & full
+  line 68     TODO   add iteration for over all directories in config with default path
+  line 104    TODO   error handler needed => one-liner
+  line 112    TODO   error handler needed => one-liner
+cmd/utilParse.go
+  line 38     TODO   add lefts
+  line 58     TODO   high level: parse edn => read file line by line to extract values. mount on structs to indicate config & color
+  line 59     TODO   high level: generate markdown => extract values mounted on structs
+==================================================
