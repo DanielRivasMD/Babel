@@ -52,11 +52,27 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+type Row struct {
+	Action      string
+	Description string
+	Command     string
+	Program     string
+
+	Trigger    string
+	Keybinding string
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func runKey(cmd *cobra.Command, args []string) {
+	var rows []Row
+
+	// TODO: error handler needed => one-liner
 	if ednFile == "" {
 		log.Fatal("please pass --file <path>.edn")
 	}
 
+	// TODO: reader needed
 	data, err := os.ReadFile(ednFile)
 	if err != nil {
 		log.Fatalf("failed to read %s: %v", ednFile, err)
@@ -67,15 +83,6 @@ func runKey(cmd *cobra.Command, args []string) {
 	if verbose {
 		fmt.Printf("Debug: found %d '^' carets in %s\n\n", totalCarets, ednFile)
 	}
-
-	type Row struct {
-		Description string
-		Program     string
-		Action      string
-		Trigger     string
-		Keybinding  string
-	}
-	var rows []Row
 
 	pos := 0
 	for {
@@ -155,22 +162,15 @@ func runKey(cmd *cobra.Command, args []string) {
 
 		// 6) unmarshal metadata
 		var rawMeta map[edn.Keyword]any
+		// TODO: handle with horus
 		if err := edn.Unmarshal([]byte(metadataStr), &rawMeta); err != nil {
 			log.Fatalf("EDN metadata unmarshal error: %v", err)
 		}
 
-		// // DEBUG: show exactly what metadataStr and rawMeta we got
-		// fmt.Println("-------")
-		// fmt.Println("metadataStr:", metadataStr)
-		// fmt.Println("rawMeta:")
-		// for key, val := range rawMeta {
-		// 	fmt.Printf("  %s => %#v\n", string(key), val)
-		// }
-		// fmt.Println()
-
 		// 7) decode the vector form
 		var raw any
 		dec := edn.NewDecoder(strings.NewReader(ruleStr))
+		// TODO: handle with horus
 		if err := dec.Decode(&raw); err != nil {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
@@ -183,14 +183,14 @@ func runKey(cmd *cobra.Command, args []string) {
 		triggerRaw, _ := vec[0].(edn.Keyword)
 		t := string(triggerRaw)
 		t = strings.TrimPrefix(t, "!")
-		parts := strings.SplitN(t, "#", 2) // ["TC", "Pleft_arrow"]
+		parts := strings.SplitN(t, "#P", 2) // ["TC", "Pleft_arrow"]
 		group := parts[0]
 		namePart := ""
 		if len(parts) > 1 {
 			namePart = parts[1]
 		}
-		namePart = strings.TrimPrefix(namePart[1:], "P")
 		trigger := fmt.Sprintf("%s %s", group, namePart)
+		trigger = strings.ReplaceAll(trigger, "right_control", "<W>")
 
 		// 9) keybinding sequence
 		var keySeq string
@@ -203,6 +203,8 @@ func runKey(cmd *cobra.Command, args []string) {
 		} else {
 			keySeq = fmt.Sprint(vec[1])
 		}
+		keySeq = strings.ReplaceAll(keySeq, ":", "")
+		keySeq = strings.ReplaceAll(keySeq, "!", "")
 
 		// 10) collect rows for each :doc/actions
 		if rawActs, found := rawMeta[edn.Keyword("doc/actions")]; found {
@@ -215,7 +217,7 @@ func runKey(cmd *cobra.Command, args []string) {
 					}
 
 					// 2) Extract your fields by converting each key
-					var actionName, prog, description string
+					var action, prog, description, command string
 
 					// helper to fetch and fmt.Sprint any value
 					fetch := func(k any) (string, bool) {
@@ -227,9 +229,9 @@ func runKey(cmd *cobra.Command, args []string) {
 
 					// check both edn.Keyword and string forms
 					if name, ok := fetch(edn.Keyword("name")); ok {
-						actionName = name
+						action = name
 					} else if name, ok := fetch("name"); ok {
-						actionName = name
+						action = name
 					}
 
 					if pr, ok := fetch(edn.Keyword("program")); ok {
@@ -244,12 +246,20 @@ func runKey(cmd *cobra.Command, args []string) {
 						description = ds
 					}
 
+					if ex, ok := fetch(edn.Keyword("exec")); ok {
+						command = ex
+					} else if ex, ok := fetch("exec"); ok {
+						command = ex
+					}
+
 					rows = append(rows, Row{
+						Action:      action,
 						Description: description,
+						Command:     command,
 						Program:     prog,
-						Action:      actionName,
-						Trigger:     trigger,
-						Keybinding:  keySeq,
+
+						Trigger:    trigger,
+						Keybinding: keySeq,
 					})
 				}
 			}
@@ -261,10 +271,10 @@ func runKey(cmd *cobra.Command, args []string) {
 		fmt.Println("No keybindings found.")
 		return
 	}
-	fmt.Println("| Program | Action      | Trigger        | Keybinding |")
-	fmt.Println("|---------|-------------|----------------|------------|")
+	fmt.Println("| Program      | Action            | Trigger  | Keybinding | Description                                        |")
+	fmt.Println("|--------------|-------------------|----------|------------|----------------------------------------------------|")
 	for _, r := range rows {
-		fmt.Printf("| %-7s | %-11s | %-14s | %-10s | %s\n",
+		fmt.Printf("| %-12s | %-17s | %-8s | %-10s | %-50s |\n",
 			r.Program, r.Action, r.Trigger, r.Keybinding, r.Description)
 	}
 }
