@@ -65,223 +65,223 @@ type Row struct {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func runKey(cmd *cobra.Command, args []string) {
+
+	validateArgs()
+	text := loadEDNFile(ednFile)
+
 	var rows []Row
-
-	// TODO: error handler needed => one-liner
-	if ednFile == "" {
-		log.Fatal("please pass --file <path>.edn")
-	}
-
-	// TODO: reader needed
-	data, err := os.ReadFile(ednFile)
-	if err != nil {
-		log.Fatalf("failed to read %s: %v", ednFile, err)
-	}
-	text := string(data)
-
-	totalCarets := strings.Count(text, "^")
-	if verbose {
-		fmt.Printf("Debug: found %d '^' carets in %s\n\n", totalCarets, ednFile)
-	}
-
 	pos := 0
 	for {
-		// 1) find next '^'
-		delta := strings.IndexRune(text[pos:], '^')
-		if delta < 0 {
+		metaStr, vecStr, nextPos, ok := extractEntry(text, pos) // 1–5
+		if !ok {
 			break
 		}
-		i := pos + delta
+		pos = nextPos
 
-		// 2) skip whitespace, expect '{'
-		j := i + 1
-		for j < len(text) && unicode.IsSpace(rune(text[j])) {
-			j++
-		}
-		if j >= len(text) || text[j] != '{' {
-			pos = i + 1
-			continue
-		}
-
-		// 3) extract metadata map literal
-		metaStart := j
-		braceCount := 0
-		k := j
-	metaLoop:
-		for ; k < len(text); k++ {
-			switch text[k] {
-			case '{':
-				braceCount++
-			case '}':
-				braceCount--
-				if braceCount == 0 {
-					k++ // include closing brace
-					break metaLoop
-				}
-			}
-		}
-		if braceCount != 0 || k > len(text) {
-			break
-		}
-		metaEnd := k
-		metadataStr := text[metaStart:metaEnd]
-
-		// 4) skip to '['
-		p := metaEnd
-		for p < len(text) && unicode.IsSpace(rune(text[p])) {
-			p++
-		}
-		if p >= len(text) || text[p] != '[' {
-			pos = metaEnd
-			continue
-		}
-
-		// 5) extract the vector literal
-		vecStart := p
-		bracketCount := 0
-		q := p
-	vecLoop:
-		for ; q < len(text); q++ {
-			switch text[q] {
-			case '[':
-				bracketCount++
-			case ']':
-				bracketCount--
-				if bracketCount == 0 {
-					q++ // include closing bracket
-					break vecLoop
-				}
-			}
-		}
-		if bracketCount != 0 || q > len(text) {
-			break
-		}
-		vecEnd := q
-		ruleStr := text[vecStart:vecEnd]
-		pos = vecEnd
-
-		// 6) unmarshal metadata
-		var rawMeta map[edn.Keyword]any
-		// TODO: handle with horus
-		if err := edn.Unmarshal([]byte(metadataStr), &rawMeta); err != nil {
+		rawMeta, err := decodeMetadata(metaStr) // 6
+		if err != nil {
 			log.Fatalf("EDN metadata unmarshal error: %v", err)
 		}
 
-		// 7) decode the vector form
-		var raw any
-		dec := edn.NewDecoder(strings.NewReader(ruleStr))
-		// TODO: handle with horus
-		if err := dec.Decode(&raw); err != nil {
+		vec, err := decodeRule(vecStr) // 7
+		if err != nil {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
-		vec, ok := raw.([]any)
-		if !ok || len(vec) < 2 {
-			continue
-		}
 
-		// 8) human-readable trigger
-		triggerRaw, _ := vec[0].(edn.Keyword)
-		t := string(triggerRaw)
-		t = strings.TrimPrefix(t, "!")
-		parts := strings.SplitN(t, "#P", 2) // ["TC", "Pleft_arrow"]
-		group := parts[0]
-		namePart := ""
-		if len(parts) > 1 {
-			namePart = parts[1]
-		}
-		trigger := fmt.Sprintf("%s %s", group, namePart)
-		trigger = strings.ReplaceAll(trigger, "right_arrow", "->")
-		trigger = strings.ReplaceAll(trigger, "right_control", "<W>")
-		trigger = strings.ReplaceAll(trigger, "right_option", "<E>")
-		trigger = strings.ReplaceAll(trigger, "right_command", "<Q>")
-		trigger = strings.ReplaceAll(trigger, "right_shift", "<R>")
+		trigger := humanReadableTrigger(vec[0].(edn.Keyword)) // 8
+		keySeq := buildKeySequence(vec[1])                    // 9
 
-		trigger = strings.ReplaceAll(trigger, "left_arrow", "<-")
-		trigger = strings.ReplaceAll(trigger, "left_control", "<T>")
-		trigger = strings.ReplaceAll(trigger, "left_option", "<O>")
-		trigger = strings.ReplaceAll(trigger, "left_command", "<C>")
-		trigger = strings.ReplaceAll(trigger, "left_shift", "<S>")
+		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...) // 10
+	}
 
-		trigger = strings.ReplaceAll(trigger, "tab", "TAB")
-		trigger = strings.ReplaceAll(trigger, "caps_lock", "<P>")
-		trigger = strings.ReplaceAll(trigger, "spacebar", "<_>")
+	emitTable(rows) // 11
+}
 
-		
-		// 9) keybinding sequence
-		var keySeq string
-		if kv, ok := vec[1].([]any); ok {
-			seq := make([]string, len(kv))
-			for i, e := range kv {
-				seq[i] = fmt.Sprint(e)
-			}
-			keySeq = strings.Join(seq, " ")
-		} else {
-			keySeq = fmt.Sprint(vec[1])
-		}
-		keySeq = strings.ReplaceAll(keySeq, ":", "")
-		keySeq = strings.ReplaceAll(keySeq, "!", "")
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		// 10) collect rows for each :doc/actions
-		if rawActs, found := rawMeta[edn.Keyword("doc/actions")]; found {
-			if acts, ok := rawActs.([]any); ok {
-				for _, a := range acts {
-					// 1) Assert to the raw generic map
-					rawMap, ok := a.(map[any]any)
-					if !ok {
-						continue
-					}
+// 1) validateArgs ensures --file was provided
+func validateArgs() {
+	if ednFile == "" {
+		log.Fatal("please pass --file <path>.edn")
+	}
+}
 
-					// 2) Extract your fields by converting each key
-					var action, prog, description, command string
+// 2) loadEDNFile reads the entire EDN file into a string
+func loadEDNFile(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("failed to read %s: %v", path, err)
+	}
+	return string(data)
+}
 
-					// helper to fetch and fmt.Sprint any value
-					fetch := func(k any) (string, bool) {
-						if v, exists := rawMap[k]; exists {
-							return fmt.Sprint(v), true
-						}
-						return "", false
-					}
+// 1–5) extractEntry finds the next ^{…}[…] pair, returns meta & vector & new position
+func extractEntry(text string, startPos int) (metaStr, vecStr string, nextPos int, ok bool) {
+	// 1) find next caret
+	delta := strings.IndexRune(text[startPos:], '^')
+	if delta < 0 {
+		return "", "", 0, false
+	}
+	i := startPos + delta
 
-					// check both edn.Keyword and string forms
-					if name, ok := fetch(edn.Keyword("name")); ok {
-						action = name
-					} else if name, ok := fetch("name"); ok {
-						action = name
-					}
+	// 2) skip whitespace, expect '{'
+	j := i + 1
+	for j < len(text) && unicode.IsSpace(rune(text[j])) {
+		j++
+	}
+	if j >= len(text) || text[j] != '{' {
+		return extractEntry(text, i+1)
+	}
 
-					if pr, ok := fetch(edn.Keyword("program")); ok {
-						prog = pr
-					} else if pr, ok := fetch("program"); ok {
-						prog = pr
-					}
-
-					if ds, ok := fetch(edn.Keyword("description")); ok {
-						description = ds
-					} else if ds, ok := fetch("description"); ok {
-						description = ds
-					}
-
-					if ex, ok := fetch(edn.Keyword("exec")); ok {
-						command = ex
-					} else if ex, ok := fetch("exec"); ok {
-						command = ex
-					}
-
-					rows = append(rows, Row{
-						Action:      action,
-						Description: description,
-						Command:     command,
-						Program:     prog,
-
-						Trigger:    trigger,
-						Keybinding: keySeq,
-					})
-				}
+	// 3) extract metadata map literal
+	braceCount := 0
+	k := j
+metaLoop:
+	for ; k < len(text); k++ {
+		switch text[k] {
+		case '{':
+			braceCount++
+		case '}':
+			braceCount--
+			if braceCount == 0 {
+				k++ // include closing
+				break metaLoop
 			}
 		}
 	}
+	if braceCount != 0 {
+		return "", "", 0, false
+	}
+	metaEnd := k
+	metaStr = text[j:metaEnd]
 
-	// 11) emit the Markdown table
+	// 4) skip to '['
+	p := metaEnd
+	for p < len(text) && unicode.IsSpace(rune(text[p])) {
+		p++
+	}
+	if p >= len(text) || text[p] != '[' {
+		return extractEntry(text, metaEnd)
+	}
+
+	// 5) extract the vector literal
+	bracketCount := 0
+	q := p
+vecLoop:
+	for ; q < len(text); q++ {
+		switch text[q] {
+		case '[':
+			bracketCount++
+		case ']':
+			bracketCount--
+			if bracketCount == 0 {
+				q++ // include closing
+				break vecLoop
+			}
+		}
+	}
+	if bracketCount != 0 {
+		return "", "", 0, false
+	}
+	vecEnd := q
+	vecStr = text[p:vecEnd]
+	return metaStr, vecStr, vecEnd, true
+}
+
+// 6) decodeMetadata turns the EDN map string into Go map
+func decodeMetadata(metaStr string) (map[edn.Keyword]any, error) {
+	var rawMeta map[edn.Keyword]any
+	err := edn.Unmarshal([]byte(metaStr), &rawMeta)
+	return rawMeta, err
+}
+
+// 7) decodeRule parses the EDN vector into []any
+func decodeRule(vecStr string) ([]any, error) {
+	var raw any
+	dec := edn.NewDecoder(strings.NewReader(vecStr))
+	if err := dec.Decode(&raw); err != nil {
+		return nil, err
+	}
+	vec, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("invalid rule form")
+	}
+	return vec, nil
+}
+
+// 8) humanReadableTrigger rewrites a Keyword like ":!Tpage_up" → "T page_up"
+func humanReadableTrigger(raw edn.Keyword) string {
+	s := string(raw)
+	s = strings.TrimPrefix(s, ":!")
+	parts := strings.SplitN(s, "#P", 2) // group#Pname
+	group := parts[0]
+	name := ""
+	if len(parts) > 1 {
+		name = parts[1]
+	}
+	// replace arrows & modifiers
+	r := strings.NewReplacer(
+		"right_arrow", "→",
+		"left_arrow", "←",
+		"right_control", "<W>",
+		"left_control", "<T>",
+		"right_option", "<E>",
+		"left_option", "<O>",
+		"right_shift", "<R>",
+		"left_shift", "<S>",
+		"tab", "TAB",
+		"caps_lock", "<P>",
+		"spacebar", "<_>",
+	)
+	return r.Replace(fmt.Sprintf("%s %s", group, name))
+}
+
+// 9) buildKeySequence joins the second element of the rule vector into a string
+func buildKeySequence(x any) string {
+	switch kv := x.(type) {
+	case []any:
+		parts := make([]string, len(kv))
+		for i, e := range kv {
+			parts[i] = fmt.Sprint(e)
+		}
+		return strings.Join(parts, " ")
+	default:
+		return fmt.Sprint(kv)
+	}
+}
+
+// 10) collectRows expands each :doc/actions into one or more Rows
+func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
+	var out []Row
+	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
+	if !ok {
+		return out
+	}
+	for _, a := range acts {
+		m, ok := a.(map[any]any)
+		if !ok {
+			continue
+		}
+		fetch := func(k any) string {
+			if v, ok := m[k]; ok {
+				return fmt.Sprint(v)
+			}
+			return ""
+		}
+		out = append(out, Row{
+			Action:      fetch(edn.Keyword("name")),
+			Description: fetch(edn.Keyword("description")),
+			Command:     fetch(edn.Keyword("exec")),
+			Program:     fetch(edn.Keyword("program")),
+			Trigger:     trigger,
+			Keybinding:  strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
+		})
+	}
+	return out
+}
+
+// 11) emitTable prints all rows as a Markdown table
+func emitTable(rows []Row) {
 	if len(rows) == 0 {
 		fmt.Println("No keybindings found.")
 		return
@@ -289,8 +289,10 @@ func runKey(cmd *cobra.Command, args []string) {
 	fmt.Println("| Program      | Action            | Trigger  | Keybinding | Description                                        |")
 	fmt.Println("|--------------|-------------------|----------|------------|----------------------------------------------------|")
 	for _, r := range rows {
-		fmt.Printf("| %-12s | %-17s | %-8s | %-10s | %-50s |\n",
-			r.Program, r.Action, r.Trigger, r.Keybinding, r.Description)
+		fmt.Printf(
+			"| %-12s | %-17s | %-8s | %-10s | %-50s |\n",
+			r.Program, r.Action, r.Trigger, r.Keybinding, r.Description,
+		)
 	}
 }
 
