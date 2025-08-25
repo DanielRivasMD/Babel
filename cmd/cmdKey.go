@@ -22,7 +22,9 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
+	"github.com/ttacon/chalk"
 	"olympos.io/encoding/edn"
 )
 
@@ -53,9 +55,9 @@ func init() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type Row struct {
-	Action      string
-	Command     string
-	Program     string
+	Action  string
+	Command string
+	Program string
 
 	Trigger    string
 	Keybinding string
@@ -101,19 +103,31 @@ func runKey(cmd *cobra.Command, args []string) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // 1) validateArgs ensures --file was provided
-	// TODO: error handler needed => one-liner
 func validateArgs() {
 	if ednFile == "" {
-		log.Fatal("please pass --file <path>.edn")
+		horus.CheckErr(
+			fmt.Errorf(""),
+			horus.WithMessage(""),
+			horus.WithExitCode(2),
+			horus.WithFormatter(func(he *horus.Herror) string {
+				return "please pass --file <path>.edn"
+			}),
+		)
 	}
 }
 
 // 2) loadEDNFile reads the entire EDN file into a string
-	// TODO: error handler needed => one-liner
 func loadEDNFile(path string) string {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatalf("failed to read %s: %v", path, err)
+		horus.CheckErr(
+			err,
+			horus.WithMessage(path),
+			horus.WithExitCode(2),
+			horus.WithFormatter(func(he *horus.Herror) string {
+				return "failed to read: " + chalk.Red.Color(he.Message)
+			}),
+		)
 	}
 	return string(data)
 }
@@ -272,11 +286,11 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 			return ""
 		}
 		out = append(out, Row{
-			Action:      fetch(edn.Keyword("name")),
-			Command:     fetch(edn.Keyword("exec")),
-			Program:     fetch(edn.Keyword("program")),
-			Trigger:     trigger,
-			Keybinding:  strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
+			Action:     fetch(edn.Keyword("name")),
+			Command:    fetch(edn.Keyword("exec")),
+			Program:    fetch(edn.Keyword("program")),
+			Trigger:    trigger,
+			Keybinding: strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
 		})
 	}
 	return out
