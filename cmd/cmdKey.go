@@ -190,8 +190,23 @@ func runKey(cmd *cobra.Command, args []string) {
 			namePart = parts[1]
 		}
 		trigger := fmt.Sprintf("%s %s", group, namePart)
+		trigger = strings.ReplaceAll(trigger, "right_arrow", "->")
 		trigger = strings.ReplaceAll(trigger, "right_control", "<W>")
+		trigger = strings.ReplaceAll(trigger, "right_option", "<E>")
+		trigger = strings.ReplaceAll(trigger, "right_command", "<Q>")
+		trigger = strings.ReplaceAll(trigger, "right_shift", "<R>")
 
+		trigger = strings.ReplaceAll(trigger, "left_arrow", "<-")
+		trigger = strings.ReplaceAll(trigger, "left_control", "<T>")
+		trigger = strings.ReplaceAll(trigger, "left_option", "<O>")
+		trigger = strings.ReplaceAll(trigger, "left_command", "<C>")
+		trigger = strings.ReplaceAll(trigger, "left_shift", "<S>")
+
+		trigger = strings.ReplaceAll(trigger, "tab", "TAB")
+		trigger = strings.ReplaceAll(trigger, "caps_lock", "<P>")
+		trigger = strings.ReplaceAll(trigger, "spacebar", "<_>")
+
+		
 		// 9) keybinding sequence
 		var keySeq string
 		if kv, ok := vec[1].([]any); ok {
