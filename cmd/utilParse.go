@@ -15,6 +15,7 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Package-level variable for the TC prefix.
+// TODO: reuse parse functions to render keyboard
 var TC = "TC"
 
 // ednFile is assumed to be declared externally.

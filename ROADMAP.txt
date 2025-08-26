@@ -1,22 +1,20 @@
 - wire the babel generation with `lilith`
-- use `edn` as the master config
-- transpile to other files, for example, `toml` & `yaml`
-- render keyboard for desired hotkey combination, for example: `ctl-cmd` => `babel render`
-- search for keyboard shortcut for given action on app, for example: open file in helix => `babel query`
-- search for keyboard shortcut output, for example: where is `Tf` => `babel query`
-- sort & list keymaps so it is easier to understand empty => `babel table`
-- set up an automatic searcher based on root directory, for example: parse all `edn` files contained => `babel table`
-- use flags to filter per app, action, etc
-- implement TUI for `babel query`
+- transpile config files given master `edn` metadata annotations => `babel interpret`; with option for spefic targets => `babel interpret --target micro`
+- or hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
+
+- render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
+- query keyboard shortcut for given action on app => `babel display --action `open file` --program helix
+- or query for shortcut output => `babel display --trigger `ctl-cmd-h` or `babel display --trigger Tf`
+- prettier table framework?
 
 ==================================================
 cmd/cmdKey.go
-  line 72     TODO   add filter for program
-  line 73     TODO   add filter for non-empty (default), empty & full
-  line 74     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
-  line 75     TODO   update error handlers
+  line 86     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
+  line 87     TODO   update error handlers
+  line 359    TODO   hardcode these values at root
 cmd/utilParse.go
-  line 38     TODO   add lefts
-  line 58     TODO   high level: parse edn => read file line by line to extract values. mount on structs to indicate config & color
-  line 59     TODO   high level: generate markdown => extract values mounted on structs
+  line 18     TODO   reuse parse functions to render keyboard
+  line 39     TODO   add lefts
+  line 59     TODO   high level: parse edn => read file line by line to extract values. mount on structs to indicate config & color
+  line 60     TODO   high level: generate markdown => extract values mounted on structs
 ==================================================
