@@ -17,8 +17,10 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -43,6 +45,7 @@ var keyCmd = &cobra.Command{
 
 var (
 	ednFile string
+	rootDir string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,6 +53,7 @@ var (
 func init() {
 	rootCmd.AddCommand(keyCmd)
 	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
+	keyCmd.Flags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Configuration root directory (will scan all .edn under here)")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,54 +71,42 @@ type Row struct {
 
 // TODO: add filter for program
 // TODO: add filter for non-empty (default), empty & full
-// TODO: add iteration for over all directories in config with default path
 func runKey(cmd *cobra.Command, args []string) {
-	validateArgs()
-	text := loadEDNFile(ednFile)
-
-	var rows []Row
-	pos := 0
-	for {
-		metaStr, vecStr, nextPos, ok := extractEntry(text, pos) // 1–5
-		if !ok {
-			break
-		}
-		pos = nextPos
-
-		rawMeta, err := decodeMetadata(metaStr) // 6
-		if err != nil {
-			log.Fatalf("EDN metadata unmarshal error: %v", err)
-		}
-
-		vec, err := decodeRule(vecStr) // 7
-		if err != nil {
-			log.Fatalf("EDN rule decode error: %v", err)
-		}
-
-		trigger := humanReadableTrigger(vec[0].(edn.Keyword)) // 8
-		keySeq := buildKeySequence(vec[1])                    // 9
-
-		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...) // 10
+	// 0) make sure we have at least one input source
+	if ednFile == "" && rootDir == "" {
+		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
 	}
 
-	emitTable(rows) // 11
+	// 1) build list of files to process
+	files := resolveFiles(ednFile, rootDir)
+	fmt.Println(files)
+
+	// 2) process each file and collect rows
+	var allRows []Row
+	for _, f := range files {
+		text := loadEDNFile(f)
+		allRows = append(allRows, parseBindings(text)...)
+	}
+
+	// 3) emit a single table from allRows
+	emitTable(allRows)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// 1) validateArgs ensures --file was provided
-func validateArgs() {
-	if ednFile == "" {
-		horus.CheckErr(
-			fmt.Errorf(""),
-			horus.WithMessage(""),
-			horus.WithExitCode(2),
-			horus.WithFormatter(func(he *horus.Herror) string {
-				return "please pass --file <path>.edn"
-			}),
-		)
-	}
-}
+// // 1) validateArgs ensures --file was provided
+// func validateArgs() {
+// 	if ednFile == "" {
+// 		horus.CheckErr(
+// 			fmt.Errorf(""),
+// 			horus.WithMessage(""),
+// 			horus.WithExitCode(2),
+// 			horus.WithFormatter(func(he *horus.Herror) string {
+// 				return "please pass --file <path>.edn"
+// 			}),
+// 		)
+// 	}
+// }
 
 // 2) loadEDNFile reads the entire EDN file into a string
 func loadEDNFile(path string) string {
@@ -302,14 +294,80 @@ func emitTable(rows []Row) {
 		fmt.Println("No keybindings found.")
 		return
 	}
-	fmt.Println("| Program      | Action            | Trigger  | Keybinding |")
-	fmt.Println("|--------------|-------------------|----------|------------|")
+	fmt.Println("| Program      | Action                         | Trigger    | Keybinding |")
+	fmt.Println("|--------------|--------------------------------|------------|------------|")
 	for _, r := range rows {
 		fmt.Printf(
-			"| %-12s | %-17s | %-8s | %-10s |\n",
+			"| %-12s | %-30s | %-10s | %-10s |\n",
 			r.Program, r.Action, r.Trigger, r.Keybinding,
 		)
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func defaultRootDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "" // will be caught later
+	}
+	return filepath.Join(home, ".saiyajin", "frag")
+}
+
+// resolveFiles returns either the single --file or all .edn under --root
+func resolveFiles(file, root string) []string {
+	if file != "" {
+		return []string{file}
+	}
+
+	var ednFiles []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(path, ".edn") {
+			ednFiles = append(ednFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("failed to scan %s: %v", root, err)
+	}
+	return ednFiles
+}
+
+// parseBindings wraps your existing pos-loop and subfunctions (1–10)
+func parseBindings(text string) []Row {
+	var rows []Row
+	pos := 0
+	for {
+		metaStr, vecStr, nextPos, ok := extractEntry(text, pos)
+		if !ok {
+			break
+		}
+		pos = nextPos
+
+		rawMeta, err := decodeMetadata(metaStr)
+		if err != nil {
+			log.Fatalf("EDN metadata unmarshal error: %v", err)
+		}
+
+		vec, err := decodeRule(vecStr)
+		if err != nil {
+			log.Fatalf("EDN rule decode error: %v", err)
+		}
+
+		fmt.Println(text)
+		fmt.Println(vec)
+
+		trigger := humanReadableTrigger(vec[0].(edn.Keyword))
+		keySeq := buildKeySequence(vec[1])
+		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...)
+	}
+	return rows
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
