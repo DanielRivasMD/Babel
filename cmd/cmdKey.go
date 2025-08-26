@@ -81,13 +81,14 @@ func runKey(cmd *cobra.Command, args []string) {
 
 	// 1) build list of files to process
 	files := resolveFiles(ednFile, rootDir)
-	fmt.Println(files)
 
-	// 2) process each file and collect rows
+	// 2) for each file: load text, extract “mode letter”, parse bindings
 	var allRows []Row
-	for _, f := range files {
-		text := loadEDNFile(f)
-		allRows = append(allRows, parseBindings(text)...)
+	for _, path := range files {
+		text := loadEDNFile(path)         // reads file → string
+		mode := extractMode(text)         // grabs “q” from :q-mode, etc.
+		rows := parseBindings(text, mode) // 1–10 inlined per‐file
+		allRows = append(allRows, rows...)
 	}
 
 	// 3) emit a single table from allRows
@@ -223,7 +224,8 @@ func decodeRule(vecStr string) ([]any, error) {
 // 8) humanReadableTrigger rewrites a Keyword like ":!Tpage_up" → "T page_up"
 func humanReadableTrigger(raw edn.Keyword) string {
 	s := string(raw)
-	s = strings.TrimPrefix(s, ":!")
+	s = strings.TrimPrefix(s, ":")
+	s = strings.TrimPrefix(s, "!")
 	parts := strings.SplitN(s, "#P", 2) // group#Pname
 	group := parts[0]
 	name := ""
@@ -232,15 +234,21 @@ func humanReadableTrigger(raw edn.Keyword) string {
 	}
 	// replace arrows & modifiers
 	r := strings.NewReplacer(
+		"up_arrow", "↑",
+		"down_arrow", "↓",
 		"right_arrow", "→",
 		"left_arrow", "←",
 		"right_control", "<W>",
 		"left_control", "<T>",
 		"right_option", "<E>",
 		"left_option", "<O>",
+		"right_command", "<Q>",
+		"left_command", "<C>",
 		"right_shift", "<R>",
 		"left_shift", "<S>",
 		"tab", "TAB",
+		"delete_or_backspace", "DEL",
+		"return_or_enter", "RET",
 		"caps_lock", "<P>",
 		"spacebar", "<_>",
 	)
@@ -341,35 +349,76 @@ func resolveFiles(file, root string) []string {
 	return ednFiles
 }
 
-// parseBindings wraps your existing pos-loop and subfunctions (1–10)
-func parseBindings(text string) []Row {
+// parseBindings drives steps 1–10, taking the raw EDN text + mode letter.
+func parseBindings(text, modeLetter string) []Row {
 	var rows []Row
 	pos := 0
+
 	for {
+		// 1–5) find the next ^{…}[…] block
 		metaStr, vecStr, nextPos, ok := extractEntry(text, pos)
 		if !ok {
 			break
 		}
 		pos = nextPos
 
+		// 6) decode metadata
 		rawMeta, err := decodeMetadata(metaStr)
 		if err != nil {
 			log.Fatalf("EDN metadata unmarshal error: %v", err)
 		}
 
+		// 7) decode the rule vector
 		vec, err := decodeRule(vecStr)
 		if err != nil {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
 
-		fmt.Println(text)
-		fmt.Println(vec)
-
+		// 8) human‐readable trigger (e.g. “T page_up”), then override with modeLetter
 		trigger := humanReadableTrigger(vec[0].(edn.Keyword))
+		if modeLetter != "" {
+			trigger = modeLetter + trigger
+		}
+
+		// 9) build the key sequence string
 		keySeq := buildKeySequence(vec[1])
+
+		// 10) expand each :doc/actions entry into one Row
 		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...)
 	}
+
 	return rows
+}
+
+// extractMode finds the first symbol immediately under :rules,
+// e.g. [:q-mode …], trims the leading “:”, splits on “-”
+// and returns the first character as a lowercase string.
+func extractMode(text string) string {
+	ixSpace := 20
+	// 1) locate the ":rules" clause
+	ruleStart := strings.Index(text, ":rules")
+	if ruleStart < 0 {
+		return ""
+	}
+	// 2) find the '[' that starts the rules vector
+	sliceRule := text[ruleStart : ruleStart+ixSpace]
+	brOpen := strings.Index(sliceRule, "[")
+	if brOpen < 0 {
+		return ""
+	}
+	if sliceRule[brOpen+1:brOpen+2] != ":" {
+		return ""
+	} else {
+		sliceMode := sliceRule[brOpen:]
+		startMode := strings.Index(sliceMode, ":")
+		endMode := strings.Index(sliceMode, "-")
+		if startMode < 0 || endMode < 0 {
+			return ""
+		}
+		mode := sliceRule[brOpen:][startMode:endMode]
+		mode = strings.TrimPrefix(mode, ":")
+		return mode
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
