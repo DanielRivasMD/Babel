@@ -35,7 +35,7 @@ import (
 
 var keyCmd = &cobra.Command{
 	Use:     "key",
-	Short:   "Generate keybinding docs as Markdown",
+	Short:   "Display current bindings",
 	Long:    helpKey,
 	Example: exampleKey,
 
@@ -77,8 +77,8 @@ type Row struct {
 	Command string
 	Program string
 
-	Trigger    string
-	Keybinding string
+	Trigger string
+	Binding string
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -337,11 +337,11 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 			return ""
 		}
 		out = append(out, Row{
-			Action:     fetch(edn.Keyword("name")),
-			Command:    fetch(edn.Keyword("exec")),
-			Program:    fetch(edn.Keyword("program")),
-			Trigger:    trigger,
-			Keybinding: strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
+			Action:  fetch(edn.Keyword("name")),
+			Command: fetch(edn.Keyword("exec")),
+			Program: fetch(edn.Keyword("program")),
+			Trigger: trigger,
+			Binding: strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
 		})
 	}
 	return out
@@ -350,15 +350,16 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 // 11) emitTable prints all rows as a Markdown table
 func emitTable(rows []Row) {
 	if len(rows) == 0 {
-		fmt.Println("No keybindings found.")
+		fmt.Println("No bindings found.")
 		return
 	}
-	fmt.Println("| Program      | Action                         | Trigger    | Keybinding |")
+	fmt.Println("| Program      | Action                         | Trigger    | Binding    |")
 	fmt.Println("|--------------|--------------------------------|------------|------------|")
 	for _, r := range rows {
+		// TODO: hardcode these values at root
 		fmt.Printf(
 			"| %-12s | %-30s | %-10s | %-10s |\n",
-			r.Program, r.Action, r.Trigger, r.Keybinding,
+			r.Program, r.Action, r.Trigger, r.Binding,
 		)
 	}
 }
