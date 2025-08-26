@@ -11,11 +11,10 @@
 
 ==================================================
 cmd/cmdKey.go
-  line 66     TODO   add filter for program
-  line 67     TODO   add filter for non-empty (default), empty & full
-  line 68     TODO   add iteration for over all directories in config with default path
-  line 104    TODO   error handler needed => one-liner
-  line 112    TODO   error handler needed => one-liner
+  line 72     TODO   add filter for program
+  line 73     TODO   add filter for non-empty (default), empty & full
+  line 74     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
+  line 75     TODO   update error handlers
 cmd/utilParse.go
   line 38     TODO   add lefts
   line 58     TODO   high level: parse edn => read file line by line to extract values. mount on structs to indicate config & color

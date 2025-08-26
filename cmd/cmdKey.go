@@ -71,6 +71,8 @@ type Row struct {
 
 // TODO: add filter for program
 // TODO: add filter for non-empty (default), empty & full
+// TODO: add debug flag, or use verbose, telling which file & line we are currently reading
+// TODO: update error handlers
 func runKey(cmd *cobra.Command, args []string) {
 	// 0) make sure we have at least one input source
 	if ednFile == "" && rootDir == "" {
