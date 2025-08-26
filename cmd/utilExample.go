@@ -56,7 +56,7 @@ var exampleRoot = formatExample(
 	[]string{"help"},
 )
 
-var exampleKey = formatExample(
+var exampleDisplay = formatExample(
 	"babel",
 	[]string{"key", "--file", "~/.saiyajin/frag/simple/lctlcmd.edn"},
 )

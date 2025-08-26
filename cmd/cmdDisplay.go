@@ -33,13 +33,13 @@ import (
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var keyCmd = &cobra.Command{
-	Use:     "key",
+var displayCmd = &cobra.Command{
+	Use:     "display",
 	Short:   "Display current bindings",
-	Long:    helpKey,
-	Example: exampleKey,
+	Long:    helpDisplay,
+	Example: exampleDisplay,
 
-	Run: runKey,
+	Run: runDisplay,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,14 +54,14 @@ var (
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func init() {
-	rootCmd.AddCommand(keyCmd)
+	rootCmd.AddCommand(displayCmd)
 
-	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
-	keyCmd.Flags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Configuration root directory (will scan all .edn under here)")
-	keyCmd.Flags().StringVarP(&programFilter, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
-	keyCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
+	displayCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
+	displayCmd.Flags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Configuration root directory (will scan all .edn under here)")
+	displayCmd.Flags().StringVarP(&programFilter, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
+	displayCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
 
-	keyCmd.RegisterFlagCompletionFunc("render", func(
+	displayCmd.RegisterFlagCompletionFunc("render", func(
 		cmd *cobra.Command,
 		args []string,
 		toComplete string,
@@ -85,7 +85,7 @@ type Row struct {
 
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
-func runKey(cmd *cobra.Command, args []string) {
+func runDisplay(cmd *cobra.Command, args []string) {
 	// 0) make sure we have at least one input source
 	if ednFile == "" && rootDir == "" {
 		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
