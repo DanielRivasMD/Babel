@@ -48,6 +48,7 @@ var (
 	ednFile       string
 	rootDir       string
 	programFilter string
+	renderMode    string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,6 +58,7 @@ func init() {
 	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
 	keyCmd.Flags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Configuration root directory (will scan all .edn under here)")
 	keyCmd.Flags().StringVarP(&programFilter, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
+	keyCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -104,15 +106,34 @@ func runKey(cmd *cobra.Command, args []string) {
 	}
 
 	// 3b) emit only matching rows
-	var filtered []Row
+	var progFiltered []Row
 	for _, r := range allRows {
 		if progRE == nil || progRE.MatchString(r.Program) {
-			filtered = append(filtered, r)
+			progFiltered = append(progFiltered, r)
+		}
+	}
+
+	var finalRows []Row
+	mode := strings.ToUpper(renderMode)
+	for _, r := range progFiltered {
+		switch mode {
+		case "FULL":
+			finalRows = append(finalRows, r)
+
+		case "EMPTY":
+			if r.Program == "" && r.Action == "" {
+				finalRows = append(finalRows, r)
+			}
+
+		default: // "DEFAULT"
+			if r.Program != "" && r.Action != "" {
+				finalRows = append(finalRows, r)
+			}
 		}
 	}
 
 	// 3) emit a single table from allRows
-	emitTable(filtered)
+	emitTable(finalRows)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
