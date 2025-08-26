@@ -55,10 +55,19 @@ var (
 
 func init() {
 	rootCmd.AddCommand(keyCmd)
+
 	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
 	keyCmd.Flags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Configuration root directory (will scan all .edn under here)")
 	keyCmd.Flags().StringVarP(&programFilter, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
 	keyCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
+
+	keyCmd.RegisterFlagCompletionFunc("render", func(
+		cmd *cobra.Command,
+		args []string,
+		toComplete string,
+	) ([]string, cobra.ShellCompDirective) {
+		return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -74,7 +83,6 @@ type Row struct {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: add filter for non-empty (default), empty & full
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
 func runKey(cmd *cobra.Command, args []string) {
