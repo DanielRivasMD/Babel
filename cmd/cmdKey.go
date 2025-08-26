@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -44,8 +45,9 @@ var keyCmd = &cobra.Command{
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var (
-	ednFile string
-	rootDir string
+	ednFile       string
+	rootDir       string
+	programFilter string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,6 +56,7 @@ func init() {
 	rootCmd.AddCommand(keyCmd)
 	keyCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
 	keyCmd.Flags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Configuration root directory (will scan all .edn under here)")
+	keyCmd.Flags().StringVarP(&programFilter, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +72,6 @@ type Row struct {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: add filter for program
 // TODO: add filter for non-empty (default), empty & full
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
@@ -91,8 +93,26 @@ func runKey(cmd *cobra.Command, args []string) {
 		allRows = append(allRows, rows...)
 	}
 
+	// 3a) if user passed -p, compile a regexp
+	var progRE *regexp.Regexp
+	if programFilter != "" {
+		re, err := regexp.Compile(programFilter)
+		if err != nil {
+			log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
+		}
+		progRE = re
+	}
+
+	// 3b) emit only matching rows
+	var filtered []Row
+	for _, r := range allRows {
+		if progRE == nil || progRE.MatchString(r.Program) {
+			filtered = append(filtered, r)
+		}
+	}
+
 	// 3) emit a single table from allRows
-	emitTable(allRows)
+	emitTable(filtered)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
