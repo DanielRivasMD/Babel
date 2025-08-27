@@ -42,4 +42,10 @@ var helpDisplay = formatHelp(
 	"Scan EDN metadata + vector rules & emit a 4-column Markdown table",
 )
 
+var helpInterpret = formatHelp(
+	"Daniel Rivas",
+	"<danielrivasmd@gmail.com>",
+	"",
+)
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
