@@ -55,13 +55,7 @@ func init() {
 	displayCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
 
 	horus.CheckErr(
-		displayCmd.RegisterFlagCompletionFunc("render", func(
-			cmd *cobra.Command,
-			args []string,
-			toComplete string,
-		) ([]string, cobra.ShellCompDirective) {
-			return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
-		}),
+		displayCmd.RegisterFlagCompletionFunc("render", completeRenderType),
 		horus.WithOp("display.init"),
 		horus.WithMessage("registering config completion"),
 	)

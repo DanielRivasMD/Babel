@@ -74,6 +74,12 @@ type Row struct {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func completeRenderType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func defaultRootDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
