@@ -18,7 +18,6 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 
 	"github.com/DanielRivasMD/horus"
@@ -66,39 +65,9 @@ func init() {
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
 func runDisplay(cmd *cobra.Command, args []string) {
-	// ensure at least one input source
-	if ednFile == "" && rootDir == "" {
-		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
-	}
+	allRows := gatherRows(ednFile, rootDir)
 
-	// build list of files to process
-	files := resolveFiles(ednFile, rootDir)
-
-	// for each file: load text, extract 'mode letter', parse bindings
-	var allRows []Row
-	for _, path := range files {
-		text := loadEDNFile(path)
-		mode := extractMode(text)
-		allRows = append(allRows, parseBindings(text, mode)...)
-	}
-
-	// if user passed -p, compile a regexp
-	var progRE *regexp.Regexp
-	if programFilter != "" {
-		re, err := regexp.Compile(programFilter)
-		if err != nil {
-			log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
-		}
-		progRE = re
-	}
-
-	// emit only matching rows
-	var progFiltered []Row
-	for _, r := range allRows {
-		if progRE == nil || progRE.MatchString(r.Program) {
-			progFiltered = append(progFiltered, r)
-		}
-	}
+	progFiltered := filterByProgram(allRows, programFilter)
 
 	var finalRows []Row
 	mode := strings.ToUpper(renderMode)
