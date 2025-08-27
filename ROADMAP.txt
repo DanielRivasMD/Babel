@@ -4,8 +4,6 @@
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - query keyboard shortcut for given action on app => `babel display --action `open file` --program helix
 - or query for shortcut output => `babel display --trigger `ctl-cmd-h` or `babel display --trigger Tf`
-- prettier table framework?
-- add flag for sorting bindings
 
 ==================================================
 cmd/cmdDisplay.go

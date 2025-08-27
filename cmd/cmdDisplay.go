@@ -223,6 +223,7 @@ func emitTable(rows []Row) {
 	})
 
 	// 2) print header
+	fmt.Println("===========================================================================")
 	fmt.Println("| Program      | Action                         | Trigger    | Binding    |")
 	fmt.Println("|--------------|--------------------------------|------------|------------|")
 
@@ -237,6 +238,7 @@ func emitTable(rows []Row) {
 			r.Program, r.Action, r.Trigger, val,
 		)
 	}
+	fmt.Println("===========================================================================")
 }
 
 // take the raw EDN text + mode letter.
