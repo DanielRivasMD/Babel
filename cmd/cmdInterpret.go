@@ -67,46 +67,63 @@ var prefixMaps = map[string]map[rune]string{
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func runInterpret(cmd *cobra.Command, args []string) {
-
-// TODO: update error handling & comments
 	if program == "" {
-		// TODO: add a flag to hit all targets
-		// TODO: if "helix" iterate on all "helix" targets
-		log.Fatal("please pass --target <program> (e.g. micro, helix, broot)")
+		log.Fatal("please pass --target <program> (e.g. micro or helix)")
+	}
+	if ednFile == "" && rootDir == "" {
+		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
 	}
 
+	// build all Rows once
 	allRows := gatherRows(ednFile, rootDir)
-	targetFiltered := filterByProgram(allRows, program)
 
-	rawBind := make(map[string]string, len(targetFiltered))
-	for _, r := range targetFiltered {
-		rawBind[r.Binding] = r.Command
-	}
+	// helper to emit one mode
+	emitMode := func(prog string) {
+		// 1) select only that program’s rows
+		rows := filterByProgram(allRows, prog)
 
-	formatted := formatBinds(rawBind, program)
-
-	switch program {
-	case "micro":
-		// emit JSON
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(formatted); err != nil {
-			log.Fatalf("JSON marshal error: %v", err)
+		// 2) build raw bindings
+		rawBind := make(map[string]string, len(rows))
+		for _, r := range rows {
+			rawBind[r.Binding] = r.Command
 		}
 
-	case "helix-common", "helix-insert", "helix-normal", "helix-select":
-		// emit TOML
-		// wrap your bindings under a table if you like, e.g. [keybindings]
-		w := cmd.OutOrStdout()
-		for key, val := range formatted {
-			// TOML strings must be quoted
-			fmt.Fprintf(w, "%s = %s\n", key, val)
-		}
+		// 3) format them (prefix‐map & bracket‐stripping)
+		formatted := formatBinds(rawBind, prog)
 
-	default:
-		log.Fatalf("unsupported --target %q, expected %q or %q", program, "micro", "helix")
+		// 4) emit based on mode type
+		switch prog {
+		case "micro":
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(formatted); err != nil {
+				log.Fatalf("JSON marshal error: %v", err)
+			}
+
+		case "helix-common", "helix-insert", "helix-normal", "helix-select":
+			w := cmd.OutOrStdout()
+			// optional header per mode
+			fmt.Fprintf(w, "# mode: %s\n", prog)
+			for key, val := range formatted {
+				fmt.Fprintf(w, "%s = %s\n", key, val)
+			}
+
+		default:
+			log.Fatalf("unsupported mode %q", prog)
+		}
 	}
 
+	// if user asked for "helix", loop over all four modes
+	if program == "helix" {
+		for _, sub := range []string{"helix-common", "helix-insert", "helix-normal", "helix-select"} {
+			emitMode(sub)
+			fmt.Fprintln(cmd.OutOrStdout()) // blank line between modes
+		}
+		return
+	}
+
+	// otherwise emit single target
+	emitMode(program)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,13 +139,15 @@ func getPrefixMap(target string) map[rune]string {
 
 // formatBinds converts raw keys like "OTf1" → "Alt-Ctrl-F1"
 // and strips the surrounding brackets from values "[Copy]" → "Copy".
-func formatBinds(raw map[string]string, target string) map[string]string {
+func formatBinds(raw map[string]string, program string) map[string]string {
 	out := make(map[string]string, len(raw))
-	pm := getPrefixMap(target)
+	pm := getPrefixMap(program)
 
 	for k, v := range raw {
+		fmt.Println("key: ", k)
 		prettyKey := k
 		if m := fnRe.FindStringSubmatch(k); m != nil {
+			fmt.Println("function!!!")
 			prefixRunes, fnPart := m[1], m[2]
 			var parts []string
 			for _, r := range prefixRunes {
@@ -151,7 +170,7 @@ func formatBinds(raw map[string]string, target string) map[string]string {
 		}
 
 		var prettyVal string
-		switch target {
+		switch program {
 		case "micro":
 			prettyVal = strings.Trim(v, "[]")
 		case "helix-common", "helix-insert", "helix-normal", "helix-select":
