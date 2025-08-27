@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -79,6 +80,47 @@ func completeRenderType(cmd *cobra.Command, args []string, toComplete string) ([
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// gatherRows validates flags, reads all EDN files and returns every parsed Row.
+func gatherRows(ednFile, rootDir string) []Row {
+	// require flags
+	if ednFile == "" && rootDir == "" {
+		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
+	}
+
+	// collect all EDN rows into []Row
+	files := resolveFiles(ednFile, rootDir)
+	var allRows []Row
+	for _, path := range files {
+		text := loadEDNFile(path)
+		mode := extractMode(text)
+		allRows = append(allRows, parseBindings(text, mode)...)
+	}
+	return allRows
+}
+
+// filterByProgram applies the optional programFilter regex to a slice of Rows.
+// If programFilter is empty, it returns rows unmodified.
+func filterByProgram(rows []Row, programFilter string) []Row {
+	// compile regex if provided
+	var progRE *regexp.Regexp
+	if programFilter != "" {
+		re, err := regexp.Compile(programFilter)
+		if err != nil {
+			log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
+		}
+		progRE = re
+	}
+
+	// filter
+	var out []Row
+	for _, r := range rows {
+		if progRE == nil || progRE.MatchString(r.Program) {
+			out = append(out, r)
+		}
+	}
+	return out
+}
 
 func defaultRootDir() string {
 	home, err := os.UserHomeDir()
