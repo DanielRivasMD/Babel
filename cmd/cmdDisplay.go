@@ -122,6 +122,15 @@ func humanReadableTrigger(raw edn.Keyword) string {
 		"return_or_enter", "RET",
 		"caps_lock", "<P>",
 		"spacebar", "<_>",
+
+		"open_bracket", "[",
+		"close_bracket", "]",
+		"semicolon", ";",
+		"quote", "'",
+		"backslash", "\\",
+		"comma", ",",
+		"period", ".",
+		"slash", "/",
 	)
 	return r.Replace(fmt.Sprintf("%s %s", group, name))
 }
