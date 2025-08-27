@@ -95,8 +95,8 @@ func runDisplay(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// humanReadableTrigger rewrites a Keyword like ":!Tpage_up" → "T page_up"
-func humanReadableTrigger(raw edn.Keyword) string {
+// humanReadableBind rewrites a Keyword like ":!Tpage_up" → "T page_up"
+func humanReadableBind(raw edn.Keyword) string {
 	s := string(raw)
 	s = strings.TrimPrefix(s, ":")
 	s = strings.TrimPrefix(s, "!")
@@ -108,18 +108,24 @@ func humanReadableTrigger(raw edn.Keyword) string {
 	}
 	// replace arrows & modifiers
 	r := strings.NewReplacer(
+		"page_up", "pgup",
+		"page_down", "pgdw",
+
 		"up_arrow", "↑",
 		"down_arrow", "↓",
 		"right_arrow", "→",
 		"left_arrow", "←",
-		"right_control", "<W>",
-		"left_control", "<T>",
-		"right_option", "<E>",
-		"left_option", "<O>",
-		"right_command", "<Q>",
-		"left_command", "<C>",
-		"right_shift", "<R>",
+
 		"left_shift", "<S>",
+		"left_control", "<T>",
+		"left_option", "<O>",
+		"left_command", "<C>",
+
+		"right_shift", "<R>",
+		"right_control", "<W>",
+		"right_option", "<E>",
+		"right_command", "<Q>",
+
 		"tab", "TAB",
 		"delete_or_backspace", "DEL",
 		"return_or_enter", "RET",
@@ -267,13 +273,14 @@ func parseBindings(text, modeLetter string) []Row {
 		}
 
 		// human‐readable trigger (e.g. 'T page_up'), then override with modeLetter
-		trigger := humanReadableTrigger(vec[0].(edn.Keyword))
+		trigger := humanReadableBind(vec[0].(edn.Keyword))
 		if modeLetter != "" {
 			trigger = modeLetter + trigger
 		}
 
 		// build the key sequence string
 		keySeq := buildKeySequence(vec[1])
+		keySeq = humanReadableBind(edn.Keyword(keySeq))
 
 		// expand each :doc/actions entry into one Row
 		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...)
