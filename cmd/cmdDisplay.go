@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/DanielRivasMD/horus"
@@ -41,6 +42,7 @@ var displayCmd = &cobra.Command{
 var (
 	ednFile    string
 	renderMode string
+	sortBy     string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,6 +52,7 @@ func init() {
 
 	displayCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
 	displayCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
+	displayCmd.Flags().StringVarP(&sortBy, "sort", "s", "trigger", "Sort output by one of: program, action, trigger, binding")
 
 	horus.CheckErr(
 		displayCmd.RegisterFlagCompletionFunc("render", completeRenderType),
@@ -179,24 +182,56 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 	return out
 }
 
-// emitTable prints all rows as a Markdown table
+// emitTable prints all rows as a Markdown table, sorted by --sort
 func emitTable(rows []Row) {
 	if len(rows) == 0 {
 		fmt.Println("No bindings found.")
 		return
 	}
 
-	// note: you can rename this header to "Binding/Sequence" if you like
+	// 0) normalize sort key
+	key := sortBy
+	switch key {
+	case "program", "action", "trigger", "binding":
+		// ok
+	default:
+		log.Printf("warning: unknown sort key %q, defaulting to 'trigger'", key)
+		key = "trigger"
+	}
+
+	// 1) sort in place
+	sort.Slice(rows, func(i, j int) bool {
+		a, b := rows[i], rows[j]
+		switch key {
+		case "program":
+			return a.Program < b.Program
+		case "action":
+			return a.Action < b.Action
+		case "binding":
+			// compare Sequence if you prefer it over Binding when present:
+			bi, bj := a.Binding, b.Binding
+			if a.Sequence != "" {
+				bi = a.Sequence
+			}
+			if b.Sequence != "" {
+				bj = b.Sequence
+			}
+			return bi < bj
+		default: // "trigger"
+			return a.Trigger < b.Trigger
+		}
+	})
+
+	// 2) print header
 	fmt.Println("| Program      | Action                         | Trigger    | Binding    |")
 	fmt.Println("|--------------|--------------------------------|------------|------------|")
 
+	// 3) print rows
 	for _, r := range rows {
-		// choose Sequence if present, otherwise Binding
 		val := r.Binding
 		if r.Sequence != "" {
 			val = r.Sequence
 		}
-
 		fmt.Printf(
 			"| %-12s | %-30s | %-10s | %-10s |\n",
 			r.Program, r.Action, r.Trigger, val,
