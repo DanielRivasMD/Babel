@@ -137,6 +137,12 @@ func getPrefixMap(target string) map[rune]string {
 	return prefixMaps["helix"]
 }
 
+// normalizeKey trims whitespace and any leading EDN prefix ":!"
+func normalizeKey(raw string) string {
+	s := strings.TrimSpace(raw)
+	return strings.TrimPrefix(s, ":!")
+}
+
 // formatBinds converts raw keys like "OTf1" → "Alt-Ctrl-F1"
 // and strips the surrounding brackets from values "[Copy]" → "Copy".
 func formatBinds(raw map[string]string, program string) map[string]string {
@@ -144,10 +150,10 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 	pm := getPrefixMap(program)
 
 	for k, v := range raw {
-		fmt.Println("key: ", k)
-		prettyKey := k
-		if m := fnRe.FindStringSubmatch(k); m != nil {
-			fmt.Println("function!!!")
+
+		key := normalizeKey(k)
+		prettyKey := key
+		if m := fnRe.FindStringSubmatch(key); m != nil {
 			prefixRunes, fnPart := m[1], m[2]
 			var parts []string
 			for _, r := range prefixRunes {
@@ -157,7 +163,7 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 			}
 			parts = append(parts, strings.ToUpper(fnPart))
 			prettyKey = strings.Join(parts, "-")
-		} else if m := charRe.FindStringSubmatch(k); m != nil {
+		} else if m := charRe.FindStringSubmatch(key); m != nil {
 			prefixRunes, charPart := m[1], m[2]
 			var parts []string
 			for _, r := range prefixRunes {
