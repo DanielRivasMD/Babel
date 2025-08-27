@@ -8,9 +8,7 @@
 
 | Subcommand      | Purpose                                    | Inputs                                    | Outputs                         |
 |-----------------|--------------------------------------------|-------------------------------------------|---------------------------------|
-| babel query     | Ask interactive questions or flags         | --hotkey, --action, --app                 | Matching Binding structs        |
-| babel table     | List bindings in tabular form              | Same filters as query                     | ASCII/Markdown/CSV table        |
-| babel render    | Visualize a keyboard, highlighting keys    | --hotkey, --app, optional layout          | SVG, ANSI art, JSON             |
+| babel display   | List, Visualize or Query bindings          | --action, --program, optional layout      | Markdown & ANSI art             |
 | babel interpret | Generate actual config files               | --format toml\|yaml\|json, --out path     | Target config file(s)           |
 
 
