@@ -17,17 +17,12 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	"log"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
-	"github.com/ttacon/chalk"
 	"olympos.io/encoding/edn"
 )
 
@@ -46,7 +41,6 @@ var displayCmd = &cobra.Command{
 
 var (
 	ednFile       string
-	rootDir       string
 	programFilter string
 	renderMode    string
 )
@@ -57,28 +51,20 @@ func init() {
 	rootCmd.AddCommand(displayCmd)
 
 	displayCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
-	displayCmd.Flags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Configuration root directory (will scan all .edn under here)")
 	displayCmd.Flags().StringVarP(&programFilter, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
 	displayCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
 
-	displayCmd.RegisterFlagCompletionFunc("render", func(
-		cmd *cobra.Command,
-		args []string,
-		toComplete string,
-	) ([]string, cobra.ShellCompDirective) {
-		return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
-	})
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type Row struct {
-	Action  string
-	Command string
-	Program string
-
-	Trigger string
-	Binding string
+	horus.CheckErr(
+		displayCmd.RegisterFlagCompletionFunc("render", func(
+			cmd *cobra.Command,
+			args []string,
+			toComplete string,
+		) ([]string, cobra.ShellCompDirective) {
+			return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
+		}),
+		horus.WithOp("display.init"),
+		horus.WithMessage("registering config completion"),
+	)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,24 +72,23 @@ type Row struct {
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
 func runDisplay(cmd *cobra.Command, args []string) {
-	// 0) make sure we have at least one input source
+	// ensure at least one input source
 	if ednFile == "" && rootDir == "" {
 		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
 	}
 
-	// 1) build list of files to process
+	// build list of files to process
 	files := resolveFiles(ednFile, rootDir)
 
-	// 2) for each file: load text, extract “mode letter”, parse bindings
+	// for each file: load text, extract 'mode letter', parse bindings
 	var allRows []Row
 	for _, path := range files {
-		text := loadEDNFile(path)         // reads file → string
-		mode := extractMode(text)         // grabs “q” from :q-mode, etc.
-		rows := parseBindings(text, mode) // 1–10 inlined per‐file
-		allRows = append(allRows, rows...)
+		text := loadEDNFile(path)
+		mode := extractMode(text)
+		allRows = append(allRows, parseBindings(text, mode)...)
 	}
 
-	// 3a) if user passed -p, compile a regexp
+	// if user passed -p, compile a regexp
 	var progRE *regexp.Regexp
 	if programFilter != "" {
 		re, err := regexp.Compile(programFilter)
@@ -113,7 +98,7 @@ func runDisplay(cmd *cobra.Command, args []string) {
 		progRE = re
 	}
 
-	// 3b) emit only matching rows
+	// emit only matching rows
 	var progFiltered []Row
 	for _, r := range allRows {
 		if progRE == nil || progRE.MatchString(r.Program) {
@@ -140,137 +125,13 @@ func runDisplay(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// 3) emit a single table from allRows
+	// emit a single table from allRows
 	emitTable(finalRows)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// // 1) validateArgs ensures --file was provided
-// func validateArgs() {
-// 	if ednFile == "" {
-// 		horus.CheckErr(
-// 			fmt.Errorf(""),
-// 			horus.WithMessage(""),
-// 			horus.WithExitCode(2),
-// 			horus.WithFormatter(func(he *horus.Herror) string {
-// 				return "please pass --file <path>.edn"
-// 			}),
-// 		)
-// 	}
-// }
-
-// 2) loadEDNFile reads the entire EDN file into a string
-func loadEDNFile(path string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		horus.CheckErr(
-			err,
-			horus.WithMessage(path),
-			horus.WithExitCode(2),
-			horus.WithFormatter(func(he *horus.Herror) string {
-				return "failed to read: " + chalk.Red.Color(he.Message)
-			}),
-		)
-	}
-	return string(data)
-}
-
-// 1–5) extractEntry finds the next ^{…}[…] pair, returns meta & vector & new position
-func extractEntry(text string, startPos int) (metaStr, vecStr string, nextPos int, ok bool) {
-	// 1) find next caret
-	delta := strings.IndexRune(text[startPos:], '^')
-	if delta < 0 {
-		return "", "", 0, false
-	}
-	i := startPos + delta
-
-	// 2) skip whitespace, expect '{'
-	j := i + 1
-	for j < len(text) && unicode.IsSpace(rune(text[j])) {
-		j++
-	}
-	if j >= len(text) || text[j] != '{' {
-		return extractEntry(text, i+1)
-	}
-
-	// 3) extract metadata map literal
-	braceCount := 0
-	k := j
-metaLoop:
-	for ; k < len(text); k++ {
-		switch text[k] {
-		case '{':
-			braceCount++
-		case '}':
-			braceCount--
-			if braceCount == 0 {
-				k++ // include closing
-				break metaLoop
-			}
-		}
-	}
-	if braceCount != 0 {
-		return "", "", 0, false
-	}
-	metaEnd := k
-	metaStr = text[j:metaEnd]
-
-	// 4) skip to '['
-	p := metaEnd
-	for p < len(text) && unicode.IsSpace(rune(text[p])) {
-		p++
-	}
-	if p >= len(text) || text[p] != '[' {
-		return extractEntry(text, metaEnd)
-	}
-
-	// 5) extract the vector literal
-	bracketCount := 0
-	q := p
-vecLoop:
-	for ; q < len(text); q++ {
-		switch text[q] {
-		case '[':
-			bracketCount++
-		case ']':
-			bracketCount--
-			if bracketCount == 0 {
-				q++ // include closing
-				break vecLoop
-			}
-		}
-	}
-	if bracketCount != 0 {
-		return "", "", 0, false
-	}
-	vecEnd := q
-	vecStr = text[p:vecEnd]
-	return metaStr, vecStr, vecEnd, true
-}
-
-// 6) decodeMetadata turns the EDN map string into Go map
-func decodeMetadata(metaStr string) (map[edn.Keyword]any, error) {
-	var rawMeta map[edn.Keyword]any
-	err := edn.Unmarshal([]byte(metaStr), &rawMeta)
-	return rawMeta, err
-}
-
-// 7) decodeRule parses the EDN vector into []any
-func decodeRule(vecStr string) ([]any, error) {
-	var raw any
-	dec := edn.NewDecoder(strings.NewReader(vecStr))
-	if err := dec.Decode(&raw); err != nil {
-		return nil, err
-	}
-	vec, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("invalid rule form")
-	}
-	return vec, nil
-}
-
-// 8) humanReadableTrigger rewrites a Keyword like ":!Tpage_up" → "T page_up"
+// humanReadableTrigger rewrites a Keyword like ":!Tpage_up" → "T page_up"
 func humanReadableTrigger(raw edn.Keyword) string {
 	s := string(raw)
 	s = strings.TrimPrefix(s, ":")
@@ -304,7 +165,7 @@ func humanReadableTrigger(raw edn.Keyword) string {
 	return r.Replace(fmt.Sprintf("%s %s", group, name))
 }
 
-// 9) buildKeySequence joins the second element of the rule vector into a string
+// buildKeySequence joins the second element of the rule vector into a string
 func buildKeySequence(x any) string {
 	switch kv := x.(type) {
 	case []any:
@@ -318,7 +179,7 @@ func buildKeySequence(x any) string {
 	}
 }
 
-// 10) collectRows expands each :doc/actions into one or more Rows
+// collectRows expands each :doc/actions into one or more Rows
 func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 	var out []Row
 	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
@@ -347,7 +208,7 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 	return out
 }
 
-// 11) emitTable prints all rows as a Markdown table
+// emitTable prints all rows as a Markdown table
 func emitTable(rows []Row) {
 	if len(rows) == 0 {
 		fmt.Println("No bindings found.")
@@ -364,76 +225,41 @@ func emitTable(rows []Row) {
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func defaultRootDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "" // will be caught later
-	}
-	return filepath.Join(home, ".saiyajin", "frag")
-}
-
-// resolveFiles returns either the single --file or all .edn under --root
-func resolveFiles(file, root string) []string {
-	if file != "" {
-		return []string{file}
-	}
-
-	var ednFiles []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if strings.HasSuffix(path, ".edn") {
-			ednFiles = append(ednFiles, path)
-		}
-		return nil
-	})
-	if err != nil {
-		log.Fatalf("failed to scan %s: %v", root, err)
-	}
-	return ednFiles
-}
-
-// parseBindings drives steps 1–10, taking the raw EDN text + mode letter.
+// take the raw EDN text + mode letter.
 func parseBindings(text, modeLetter string) []Row {
 	var rows []Row
 	pos := 0
 
 	for {
-		// 1–5) find the next ^{…}[…] block
+		// find the next ^{…}[…] block
 		metaStr, vecStr, nextPos, ok := extractEntry(text, pos)
 		if !ok {
 			break
 		}
 		pos = nextPos
 
-		// 6) decode metadata
+		// decode metadata
 		rawMeta, err := decodeMetadata(metaStr)
 		if err != nil {
 			log.Fatalf("EDN metadata unmarshal error: %v", err)
 		}
 
-		// 7) decode the rule vector
+		// decode the rule vector
 		vec, err := decodeRule(vecStr)
 		if err != nil {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
 
-		// 8) human‐readable trigger (e.g. “T page_up”), then override with modeLetter
+		// human‐readable trigger (e.g. 'T page_up'), then override with modeLetter
 		trigger := humanReadableTrigger(vec[0].(edn.Keyword))
 		if modeLetter != "" {
 			trigger = modeLetter + trigger
 		}
 
-		// 9) build the key sequence string
+		// build the key sequence string
 		keySeq := buildKeySequence(vec[1])
 
-		// 10) expand each :doc/actions entry into one Row
+		// expand each :doc/actions entry into one Row
 		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...)
 	}
 
@@ -441,16 +267,16 @@ func parseBindings(text, modeLetter string) []Row {
 }
 
 // extractMode finds the first symbol immediately under :rules,
-// e.g. [:q-mode …], trims the leading “:”, splits on “-”
-// and returns the first character as a lowercase string.
+// e.g. [:q-mode …], trims the leading ':', splits on '-'
+// and returns the first character as a lowercase string
 func extractMode(text string) string {
-	ixSpace := 20
-	// 1) locate the ":rules" clause
+	ixSpace := 20 // TODO: random hardcode number
+	// locate the ":rules" clause
 	ruleStart := strings.Index(text, ":rules")
 	if ruleStart < 0 {
 		return ""
 	}
-	// 2) find the '[' that starts the rules vector
+	// find the '[' that starts the rules vector
 	sliceRule := text[ruleStart : ruleStart+ixSpace]
 	brOpen := strings.Index(sliceRule, "[")
 	if brOpen < 0 {
