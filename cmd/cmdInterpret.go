@@ -20,7 +20,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -55,8 +54,18 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var fnRe = regexp.MustCompile(`^([OESTQR]+)(f[0-9]+)$`)
+
+var prefixMap = map[rune]string{
+	'O': "Alt", 'E': "Alt",
+	'T': "Ctrl", 'Q': "Ctrl",
+	'S': "Shift", 'R': "Shift",
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func runInterpret(cmd *cobra.Command, args []string) {
-	// 0) require flags
+	// require flags
 	if target == "" {
 		log.Fatal("please pass --target <program> (e.g. micro, helix, broot)")
 	}
@@ -64,7 +73,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
 	}
 
-	// 1) collect all EDN rows into []Row
+	// collect all EDN rows into []Row
 	files := resolveFiles(ednFile, rootDir)
 	var allRows []Row
 	for _, path := range files {
@@ -73,7 +82,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		allRows = append(allRows, parseBindings(text, mode)...)
 	}
 
-	// 2) filter for our target program
+	// filter for our target program
 	var rows []Row
 	for _, r := range allRows {
 		if r.Program == target {
@@ -81,18 +90,16 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// 3) build raw key→command map
+	// build raw key→command map
 	rawBind := make(map[string]string, len(rows))
 	for _, r := range rows {
 		rawBind[r.Binding] = r.Command
 	}
 
-	// 3a) now pretty‐print every key via formatBinds
+	// now pretty‐print every key via formatBinds
 	formatted := formatBinds(rawBind)
-	fmt.Println(rawBind)
-	fmt.Println(formatted)
 
-	// 4) emit JSON of the pretty map
+	// emit JSON of the pretty map
 	enc := json.NewEncoder(cmd.OutOrStdout())
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(formatted); err != nil {
@@ -102,14 +109,6 @@ func runInterpret(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var prefixMap = map[rune]string{
-	'O': "Alt", 'E': "Alt",
-	'T': "Ctrl", 'Q': "Ctrl",
-	'S': "Shift", 'R': "Shift",
-}
-
-var fnRe = regexp.MustCompile(`^([OESTQR]+)(f[0-9]+)$`)
-
 // formatBinds converts raw keys like "OTf1" → "Alt-Ctrl-F1"
 // and strips the surrounding brackets from values "[Copy]" → "Copy".
 func formatBinds(raw map[string]string) map[string]string {
@@ -117,7 +116,7 @@ func formatBinds(raw map[string]string) map[string]string {
 
 	for k, v := range raw {
 		prettyKey := k
-		// 1) detect "prefixes"+"f<digits>"
+		// detect "prefixes"+"f<digits>"
 		if m := fnRe.FindStringSubmatch(k); m != nil {
 			prefixRunes, fnPart := m[1], m[2] // e.g. "OT", "f1"
 			var parts []string
@@ -132,7 +131,7 @@ func formatBinds(raw map[string]string) map[string]string {
 			prettyKey = strings.Join(parts, "-")
 		}
 
-		// 2) strip leading/trailing brackets from the command string
+		// strip leading/trailing brackets from the command string
 		prettyVal := strings.TrimPrefix(v, "[")
 		prettyVal = strings.TrimSuffix(prettyVal, "]")
 
