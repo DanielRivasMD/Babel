@@ -40,7 +40,6 @@ var displayCmd = &cobra.Command{
 
 var (
 	ednFile       string
-	programFilter string
 	renderMode    string
 )
 
@@ -50,13 +49,12 @@ func init() {
 	rootCmd.AddCommand(displayCmd)
 
 	displayCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
-	displayCmd.Flags().StringVarP(&programFilter, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
 	displayCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
 
 	horus.CheckErr(
 		displayCmd.RegisterFlagCompletionFunc("render", completeRenderType),
 		horus.WithOp("display.init"),
-		horus.WithMessage("registering config completion"),
+		horus.WithMessage("registering config completion for flag program"),
 	)
 }
 
@@ -67,7 +65,7 @@ func init() {
 func runDisplay(cmd *cobra.Command, args []string) {
 	allRows := gatherRows(ednFile, rootDir)
 
-	progFiltered := filterByProgram(allRows, programFilter)
+	progFiltered := filterByProgram(allRows, program)
 
 	var finalRows []Row
 	mode := strings.ToUpper(renderMode)

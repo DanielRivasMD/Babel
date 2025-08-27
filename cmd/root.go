@@ -52,6 +52,7 @@ func Execute() {
 
 var (
 	verbose bool
+	program string
 	rootDir string
 )
 
@@ -59,7 +60,15 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose diagnostics")
+	rootCmd.PersistentFlags().StringVarP(&program, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
 	rootCmd.PersistentFlags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Config root (recurses .edn files)")
+
+	horus.CheckErr(
+		displayCmd.RegisterFlagCompletionFunc("program", completePrograms),
+		horus.WithOp("root.init"),
+		horus.WithMessage("registering config completion for flag program"),
+	)
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,6 +86,10 @@ type Row struct {
 
 func completeRenderType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
+}
+
+func completePrograms(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return []string{"helix", "helix-common", "helix-insert", "helix-normal", "helix-select", "micro"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

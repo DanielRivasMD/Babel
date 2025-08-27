@@ -41,16 +41,8 @@ var interpretCmd = &cobra.Command{
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var (
-	target string
-)
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func init() {
 	rootCmd.AddCommand(interpretCmd)
-
-	interpretCmd.Flags().StringVarP(&target, "target", "t", "", "Which program to emit (e.g. micro, helix, broot)")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,21 +68,23 @@ var prefixMaps = map[string]map[rune]string{
 
 func runInterpret(cmd *cobra.Command, args []string) {
 
-	if target == "" {
+// TODO: update error handling & comments
+	if program == "" {
+		// TODO: add a flag to hit all targets
 		log.Fatal("please pass --target <program> (e.g. micro, helix, broot)")
 	}
 
 	allRows := gatherRows(ednFile, rootDir)
-	targetFiltered := filterByProgram(allRows, target)
+	targetFiltered := filterByProgram(allRows, program)
 
 	rawBind := make(map[string]string, len(targetFiltered))
 	for _, r := range targetFiltered {
 		rawBind[r.Binding] = r.Command
 	}
 
-	formatted := formatBinds(rawBind, target)
+	formatted := formatBinds(rawBind, program)
 
-	switch target {
+	switch program {
 	case "micro":
 		// emit JSON
 		enc := json.NewEncoder(cmd.OutOrStdout())
@@ -99,7 +93,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 			log.Fatalf("JSON marshal error: %v", err)
 		}
 
-	case "helix":
+	case "helix-common", "helix-insert", "helix-normal", "helix-select":
 		// emit TOML
 		// wrap your bindings under a table if you like, e.g. [keybindings]
 		w := cmd.OutOrStdout()
@@ -109,7 +103,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		}
 
 	default:
-		log.Fatalf("unsupported --target %q, expected %q or %q", target, "micro", "helix")
+		log.Fatalf("unsupported --target %q, expected %q or %q", program, "micro", "helix")
 	}
 
 }
@@ -159,7 +153,7 @@ func formatBinds(raw map[string]string, target string) map[string]string {
 		switch target {
 		case "micro":
 			prettyVal = strings.Trim(v, "[]")
-		case "helix":
+		case "helix-common", "helix-insert", "helix-normal", "helix-select":
 			prettyVal = tomlList(v)
 		}
 		out[prettyKey] = prettyVal
