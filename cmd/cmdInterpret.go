@@ -71,6 +71,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 // TODO: update error handling & comments
 	if program == "" {
 		// TODO: add a flag to hit all targets
+		// TODO: if "helix" iterate on all "helix" targets
 		log.Fatal("please pass --target <program> (e.g. micro, helix, broot)")
 	}
 

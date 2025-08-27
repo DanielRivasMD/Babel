@@ -1,19 +1,22 @@
 - wire the babel generation with `lilith`
-- transpile config files given master `edn` metadata annotations => `babel interpret`; with option for spefic targets => `babel interpret --target micro`
 - or hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
 
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - query keyboard shortcut for given action on app => `babel display --action `open file` --program helix
 - or query for shortcut output => `babel display --trigger `ctl-cmd-h` or `babel display --trigger Tf`
 - prettier table framework?
-- for chars seq there will be a field in the metadata called `binding`, if present, use instead of command seq
 - add flag for sorting bindings
 
 ==================================================
 cmd/cmdDisplay.go
-  line 66     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
-  line 67     TODO   update error handlers
-  line 214    TODO   hardcode these values at root
+  line 63     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
+  line 64     TODO   update error handlers
+cmd/cmdInterpret.go
+  line 64     TODO   add more targets here, e.g. "broot": { … }
+  line 71     TODO   update error handling & comments
+  line 73     TODO   add a flag to hit all targets
+  line 74     TODO   if "helix" iterate on all "helix" targets
+  line 114    TODO   refactor as default flag
 cmd/utilParse.go
   line 18     TODO   reuse parse functions to render keyboard
   line 39     TODO   add lefts
