@@ -20,6 +20,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -54,91 +55,148 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var fnRe = regexp.MustCompile(`^([OESTQR]+)(f[0-9]+)$`)
+var fnRe = regexp.MustCompile(`^([OESRTWCQ]+)(f[0-9]+)$`)
+var charRe = regexp.MustCompile(`^([OESRTWCQ]+)([a-z])$`)
 
-var prefixMap = map[rune]string{
-	'O': "Alt", 'E': "Alt",
-	'T': "Ctrl", 'Q': "Ctrl",
-	'S': "Shift", 'R': "Shift",
+var prefixMaps = map[string]map[rune]string{
+	"micro": {
+		'O': "Alt", 'E': "Alt",
+		'T': "Ctrl", 'W': "Ctrl",
+		'S': "Shift", 'R': "Shift",
+	},
+	"helix": {
+		'O': "A", 'E': "A",
+		'T': "C", 'W': "C",
+		'S': "S", 'R': "S",
+	},
+	// TODO: add more targets here, e.g. "broot": { … }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func runInterpret(cmd *cobra.Command, args []string) {
-	// require flags
+
 	if target == "" {
 		log.Fatal("please pass --target <program> (e.g. micro, helix, broot)")
 	}
-	if ednFile == "" && rootDir == "" {
-		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
-	}
 
-	// collect all EDN rows into []Row
-	files := resolveFiles(ednFile, rootDir)
-	var allRows []Row
-	for _, path := range files {
-		text := loadEDNFile(path)
-		mode := extractMode(text)
-		allRows = append(allRows, parseBindings(text, mode)...)
-	}
+	allRows := gatherRows(ednFile, rootDir)
+	targetFiltered := filterByProgram(allRows, target)
 
-	// filter for our target program
-	var rows []Row
-	for _, r := range allRows {
-		if r.Program == target {
-			rows = append(rows, r)
-		}
-	}
-
-	// build raw key→command map
-	rawBind := make(map[string]string, len(rows))
-	for _, r := range rows {
+	rawBind := make(map[string]string, len(targetFiltered))
+	for _, r := range targetFiltered {
 		rawBind[r.Binding] = r.Command
 	}
 
-	// now pretty‐print every key via formatBinds
-	formatted := formatBinds(rawBind)
+	formatted := formatBinds(rawBind, target)
 
-	// emit JSON of the pretty map
-	enc := json.NewEncoder(cmd.OutOrStdout())
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(formatted); err != nil {
-		log.Fatalf("JSON marshal error: %v", err)
+	switch target {
+	case "micro":
+		// emit JSON
+		enc := json.NewEncoder(cmd.OutOrStdout())
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(formatted); err != nil {
+			log.Fatalf("JSON marshal error: %v", err)
+		}
+
+	case "helix":
+		// emit TOML
+		// wrap your bindings under a table if you like, e.g. [keybindings]
+		w := cmd.OutOrStdout()
+		for key, val := range formatted {
+			// TOML strings must be quoted
+			fmt.Fprintf(w, "%s = %s\n", key, val)
+		}
+
+	default:
+		log.Fatalf("unsupported --target %q, expected %q or %q", target, "micro", "helix")
 	}
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: refactor as default flag
+// helper to pick the prefixMap for a given target
+func getPrefixMap(target string) map[rune]string {
+	if pm, ok := prefixMaps[target]; ok {
+		return pm
+	}
+	return prefixMaps["helix"]
+}
+
 // formatBinds converts raw keys like "OTf1" → "Alt-Ctrl-F1"
 // and strips the surrounding brackets from values "[Copy]" → "Copy".
-func formatBinds(raw map[string]string) map[string]string {
+func formatBinds(raw map[string]string, target string) map[string]string {
 	out := make(map[string]string, len(raw))
+	pm := getPrefixMap(target)
 
 	for k, v := range raw {
 		prettyKey := k
-		// detect "prefixes"+"f<digits>"
 		if m := fnRe.FindStringSubmatch(k); m != nil {
-			prefixRunes, fnPart := m[1], m[2] // e.g. "OT", "f1"
+			prefixRunes, fnPart := m[1], m[2]
 			var parts []string
 			for _, r := range prefixRunes {
-				if txt, ok := prefixMap[r]; ok {
+				if txt, ok := pm[r]; ok {
 					parts = append(parts, txt)
 				}
 			}
-			// uppercase F<digits>
-			fnPart = strings.ToUpper(fnPart)
-			parts = append(parts, fnPart)
+			parts = append(parts, strings.ToUpper(fnPart))
+			prettyKey = strings.Join(parts, "-")
+		} else if m := charRe.FindStringSubmatch(k); m != nil {
+			prefixRunes, charPart := m[1], m[2]
+			var parts []string
+			for _, r := range prefixRunes {
+				if txt, ok := pm[r]; ok {
+					parts = append(parts, txt)
+				}
+			}
+			parts = append(parts, charPart)
 			prettyKey = strings.Join(parts, "-")
 		}
 
-		// strip leading/trailing brackets from the command string
-		prettyVal := strings.TrimPrefix(v, "[")
-		prettyVal = strings.TrimSuffix(prettyVal, "]")
-
+		var prettyVal string
+		switch target {
+		case "micro":
+			prettyVal = strings.Trim(v, "[]")
+		case "helix":
+			prettyVal = tomlList(v)
+		}
 		out[prettyKey] = prettyVal
 	}
-
 	return out
+}
+
+// tomlList converts a bracketed space‐separated string
+// into a quoted, comma‐separated TOML array.
+// e.g. "[a b c]" → ["a","b","c"].
+func tomlList(raw string) string {
+	// strip the outer brackets and any whitespace
+	inner := strings.TrimSpace(raw)
+	inner = strings.TrimPrefix(inner, "[")
+	inner = strings.TrimSuffix(inner, "]")
+
+	// exception: shell commands
+	if strings.HasPrefix(inner, ":sh ") {
+		// emit a single quoted string
+		return fmt.Sprintf("[%q]", inner)
+	}
+
+	if inner == "" {
+		return "[]"
+	}
+
+	// split on whitespace
+	parts := strings.Fields(inner)
+
+	// quote each element
+	quoted := make([]string, len(parts))
+	for i, p := range parts {
+		quoted[i] = fmt.Sprintf("%q", p)
+	}
+
+	// join into a TOML array
+	return "[" + strings.Join(quoted, ",") + "]"
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
