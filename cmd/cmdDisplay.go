@@ -39,8 +39,8 @@ var displayCmd = &cobra.Command{
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var (
-	ednFile       string
-	renderMode    string
+	ednFile    string
+	renderMode string
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,11 +159,12 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 			return ""
 		}
 		out = append(out, Row{
-			Action:  fetch(edn.Keyword("name")),
-			Command: fetch(edn.Keyword("exec")),
-			Program: fetch(edn.Keyword("program")),
-			Trigger: trigger,
-			Binding: strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
+			Action:   fetch(edn.Keyword("name")),
+			Command:  fetch(edn.Keyword("exec")),
+			Program:  fetch(edn.Keyword("program")),
+			Trigger:  trigger,
+			Binding:  strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
+			Sequence: fetch(edn.Keyword("sequence")),
 		})
 	}
 	return out
@@ -175,13 +176,21 @@ func emitTable(rows []Row) {
 		fmt.Println("No bindings found.")
 		return
 	}
+
+	// note: you can rename this header to "Binding/Sequence" if you like
 	fmt.Println("| Program      | Action                         | Trigger    | Binding    |")
 	fmt.Println("|--------------|--------------------------------|------------|------------|")
+
 	for _, r := range rows {
-		// TODO: hardcode these values at root
+		// choose Sequence if present, otherwise Binding
+		val := r.Binding
+		if r.Sequence != "" {
+			val = r.Sequence
+		}
+
 		fmt.Printf(
 			"| %-12s | %-30s | %-10s | %-10s |\n",
-			r.Program, r.Action, r.Trigger, r.Binding,
+			r.Program, r.Action, r.Trigger, val,
 		)
 	}
 }

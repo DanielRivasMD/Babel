@@ -78,8 +78,9 @@ type Row struct {
 	Command string
 	Program string
 
-	Trigger string
-	Binding string
+	Trigger  string
+	Binding  string
+	Sequence string
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
