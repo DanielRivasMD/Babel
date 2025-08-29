@@ -1,6 +1,10 @@
+- add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
+- wire up sql generation command with lsp
+
 - wire the babel generation with `lilith`
 - or hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
 
+- if only annotated, render in a different color
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - query keyboard shortcut for given action on app => `babel display --action `open file` --program helix
 - or query for shortcut output => `babel display --trigger `ctl-cmd-h` or `babel display --trigger Tf`
