@@ -132,6 +132,8 @@ func humanReadableBind(raw edn.Keyword) string {
 		"caps_lock", "<P>",
 		"spacebar", "<_>",
 
+		"hyphen", "-",
+		"equal_sign", "=",
 		"open_bracket", "[",
 		"close_bracket", "]",
 		"semicolon", ";",
@@ -140,6 +142,8 @@ func humanReadableBind(raw edn.Keyword) string {
 		"comma", ",",
 		"period", ".",
 		"slash", "/",
+
+		"non_us_pound", "•",
 	)
 	return r.Replace(fmt.Sprintf("%s %s", group, name))
 }
