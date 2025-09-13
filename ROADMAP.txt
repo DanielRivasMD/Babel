@@ -1,3 +1,5 @@
+- mvp => micro config
+
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
@@ -11,14 +13,15 @@
 
 ==================================================
 cmd/cmdDisplay.go
-  line 63     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
-  line 64     TODO   update error handlers
+  line 66     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
+  line 67     TODO   update error handlers
 cmd/cmdInterpret.go
-  line 64     TODO   add more targets here, e.g. "broot": { … }
-  line 71     TODO   update error handling & comments
-  line 73     TODO   add a flag to hit all targets
-  line 74     TODO   if "helix" iterate on all "helix" targets
-  line 114    TODO   refactor as default flag
+  line 64     TODO   add more targets here, e.g. "broot", lazygit, serpl: { }
+  line 69     TODO   upgrade flag checking
+  line 132    TODO   refactor as default flag
+cmd/root.go
+  line 53     TODO   update as struct for flags
+  line 77     TODO   add config for binding interpret & display
 cmd/utilParse.go
   line 18     TODO   reuse parse functions to render keyboard
   line 39     TODO   add lefts

@@ -61,14 +61,15 @@ var prefixMaps = map[string]map[rune]string{
 		'T': "C", 'W': "C",
 		'S': "S", 'R': "S",
 	},
-	// TODO: add more targets here, e.g. "broot": { … }
+	// TODO: add more targets here, e.g. "broot", lazygit, serpl: { }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: upgrade flag checking
 func runInterpret(cmd *cobra.Command, args []string) {
 	if program == "" {
-		log.Fatal("please pass --target <program> (e.g. micro or helix)")
+		log.Fatal("please pass --program (e.g. micro or helix)")
 	}
 	if ednFile == "" && rootDir == "" {
 		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
@@ -79,16 +80,16 @@ func runInterpret(cmd *cobra.Command, args []string) {
 
 	// helper to emit one mode
 	emitMode := func(prog string) {
-		// 1) select only that program’s rows
+		// select only that program’s rows
 		rows := filterByProgram(allRows, prog)
 
-		// 2) build raw bindings
+		// build raw bindings
 		rawBind := make(map[string]string, len(rows))
 		for _, r := range rows {
 			rawBind[r.Binding] = r.Command
 		}
 
-		// 3) format them (prefix‐map & bracket‐stripping)
+		// format them (prefix‐map & bracket‐stripping)
 		formatted := formatBinds(rawBind, prog)
 
 		// 4) emit based on mode type
