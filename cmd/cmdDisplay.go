@@ -278,6 +278,7 @@ func parseBindings(text, modeLetter string) []Row {
 
 		// human‐readable trigger (e.g. 'T page_up'), then override with modeLetter
 		trigger := humanReadableBind(vec[0].(edn.Keyword))
+		fmt.Println("trigger: ", trigger)
 		if modeLetter != "" {
 			trigger = modeLetter + trigger
 		}
@@ -285,6 +286,7 @@ func parseBindings(text, modeLetter string) []Row {
 		// build the key sequence string
 		keySeq := buildKeySequence(vec[1])
 		keySeq = humanReadableBind(edn.Keyword(keySeq))
+		fmt.Println("keySeq: ", keySeq)
 
 		// expand each :doc/actions entry into one Row
 		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...)

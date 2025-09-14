@@ -87,6 +87,8 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		rawBind := make(map[string]string, len(rows))
 		for _, r := range rows {
 			rawBind[r.Binding] = r.Command
+			fmt.Println("\nrow:")
+			fmt.Println(r)
 		}
 
 		// format them (prefix‐map & bracket‐stripping)
@@ -95,6 +97,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		// 4) emit based on mode type
 		switch prog {
 		case "micro":
+			fmt.Println(rawBind)
 			enc := json.NewEncoder(cmd.OutOrStdout())
 			enc.SetIndent("", "  ")
 			if err := enc.Encode(formatted); err != nil {
