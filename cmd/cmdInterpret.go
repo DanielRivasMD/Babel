@@ -25,7 +25,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
+	"github.com/ttacon/chalk"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,17 +68,38 @@ var prefixMaps = map[string]map[rune]string{
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func preInterpret(cmd *cobra.Command, args []string) {
+	horus.CheckEmpty(
+		flags.program,
+		"",
+		horus.WithMessage("`--daemon` is required"),
+		horus.WithExitCode(2),
+		horus.WithFormatter(func(he *horus.Herror) string { return chalk.Red.Color(he.Message) }),
+	)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // TODO: upgrade flag checking
 func runInterpret(cmd *cobra.Command, args []string) {
-	if program == "" {
+	if flags.program == "" {
 		log.Fatal("please pass --program (e.g. micro or helix)")
 	}
-	if ednFile == "" && rootDir == "" {
+	if ednFile == "" && flags.rootDir == "" {
 		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
 	}
 
-	// build all Rows once
-	allRows := gatherRows(ednFile, rootDir)
+	// resolve EDN file paths
+	paths := resolveEDNFiles(ednFile, flags.rootDir)
+	// if err != nil {
+	// 	log.Fatalf("file resolution error: %v", err)
+	// }
+
+	// parse all EDN files into rows
+	allRows, err := gatherRowsFromPaths(paths)
+	if err != nil {
+		log.Fatalf("EDN parsing error: %v", err)
+	}
 
 	// helper to emit one mode
 	emitMode := func(prog string) {
@@ -94,7 +117,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		// format them (prefix‐map & bracket‐stripping)
 		formatted := formatBinds(rawBind, prog)
 
-		// 4) emit based on mode type
+		// emit based on mode type
 		switch prog {
 		case "micro":
 			fmt.Println(rawBind)
@@ -118,7 +141,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 	}
 
 	// if user asked for "helix", loop over all four modes
-	if program == "helix" {
+	if flags.program == "helix" {
 		for _, sub := range []string{"helix-common", "helix-insert", "helix-normal", "helix-select"} {
 			emitMode(sub)
 			fmt.Fprintln(cmd.OutOrStdout()) // blank line between modes
@@ -127,7 +150,7 @@ func runInterpret(cmd *cobra.Command, args []string) {
 	}
 
 	// otherwise emit single target
-	emitMode(program)
+	emitMode(flags.program)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
