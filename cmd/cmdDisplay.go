@@ -39,20 +39,12 @@ var displayCmd = &cobra.Command{
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var (
-	ednFile    string
-	renderMode string
-	sortBy     string
-)
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func init() {
 	rootCmd.AddCommand(displayCmd)
 
-	displayCmd.Flags().StringVarP(&ednFile, "file", "f", "", "Path to your EDN file")
-	displayCmd.Flags().StringVarP(&renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
-	displayCmd.Flags().StringVarP(&sortBy, "sort", "s", "trigger", "Sort output by one of: program, action, trigger, binding")
+	displayCmd.Flags().StringVarP(&flags.ednFile, "file", "f", "", "Path to your EDN file")
+	displayCmd.Flags().StringVarP(&flags.renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
+	displayCmd.Flags().StringVarP(&flags.sortBy, "sort", "s", "trigger", "Sort output by one of: program, action, trigger, binding")
 
 	horus.CheckErr(
 		displayCmd.RegisterFlagCompletionFunc("render", completeRenderType),
@@ -65,25 +57,36 @@ func init() {
 
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
+// TODO: simplify run call
 func runDisplay(cmd *cobra.Command, args []string) {
-	allRows := gatherRows(ednFile, rootDir)
+	// resolve EDN file paths
+	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
+	// if err != nil {
+	// 	log.Fatalf("file resolution error: %v", err)
+	// }
 
-	progFiltered := filterByProgram(allRows, program)
+	// parse all EDN files into rows
+	allRows, err := gatherRowsFromPaths(paths)
+	if err != nil {
+		log.Fatalf("EDN parsing error: %v", err)
+	}
+
+	progFiltered := filterByProgram(allRows, flags.program)
 
 	var finalRows []Row
-	mode := strings.ToUpper(renderMode)
+	mode := strings.ToUpper(flags.renderMode)
 	for _, r := range progFiltered {
 		switch mode {
 		case "FULL":
 			finalRows = append(finalRows, r)
 
 		case "EMPTY":
-			if r.Program == "" && r.Action == "" {
+			if r.program == "" && r.action == "" {
 				finalRows = append(finalRows, r)
 			}
 
 		default: // "DEFAULT"
-			if r.Program != "" && r.Action != "" {
+			if r.program != "" && r.action != "" {
 				finalRows = append(finalRows, r)
 			}
 		}
@@ -163,7 +166,7 @@ func buildKeySequence(x any) string {
 }
 
 // collectRows expands each :doc/actions into one or more Rows
-func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
+func collectRows(rawMeta map[edn.Keyword]any, rawTrigger, formatTrigger, rawBinding, formatBinding string) []Row {
 	var out []Row
 	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
 	if !ok {
@@ -181,12 +184,14 @@ func collectRows(rawMeta map[edn.Keyword]any, trigger, keySeq string) []Row {
 			return ""
 		}
 		out = append(out, Row{
-			Action:   fetch(edn.Keyword("name")),
-			Command:  fetch(edn.Keyword("exec")),
-			Program:  fetch(edn.Keyword("program")),
-			Trigger:  trigger,
-			Binding:  strings.ReplaceAll(strings.ReplaceAll(keySeq, ":", ""), "!", ""),
-			Sequence: fetch(edn.Keyword("sequence")),
+			action:        fetch(edn.Keyword("name")),
+			command:       fetch(edn.Keyword("exec")),
+			program:       fetch(edn.Keyword("program")),
+			rawTrigger:    rawTrigger,
+			formattrigger: formatTrigger,
+			rawBinding:    rawBinding,
+			formatBinding: formatBinding,
+			sequence:      fetch(edn.Keyword("sequence")),
 		})
 	}
 	return out
@@ -200,7 +205,7 @@ func emitTable(rows []Row) {
 	}
 
 	// 0) normalize sort key
-	key := sortBy
+	key := flags.sortBy
 	switch key {
 	case "program", "action", "trigger", "binding":
 		// ok
@@ -214,21 +219,21 @@ func emitTable(rows []Row) {
 		a, b := rows[i], rows[j]
 		switch key {
 		case "program":
-			return a.Program < b.Program
+			return a.program < b.program
 		case "action":
-			return a.Action < b.Action
+			return a.action < b.action
 		case "binding":
 			// compare Sequence if you prefer it over Binding when present:
-			bi, bj := a.Binding, b.Binding
-			if a.Sequence != "" {
-				bi = a.Sequence
+			bi, bj := a.rawBinding, b.rawBinding
+			if a.sequence != "" {
+				bi = a.sequence
 			}
-			if b.Sequence != "" {
-				bj = b.Sequence
+			if b.sequence != "" {
+				bj = b.sequence
 			}
 			return bi < bj
 		default: // "trigger"
-			return a.Trigger < b.Trigger
+			return a.rawTrigger < b.rawTrigger
 		}
 	})
 
@@ -239,13 +244,13 @@ func emitTable(rows []Row) {
 
 	// 3) print rows
 	for _, r := range rows {
-		val := r.Binding
-		if r.Sequence != "" {
-			val = r.Sequence
+		val := r.rawBinding
+		if r.sequence != "" {
+			val = r.sequence
 		}
 		fmt.Printf(
 			"| %-12s | %-30s | %-10s | %-10s |\n",
-			r.Program, r.Action, r.Trigger, val,
+			r.program, r.action, r.rawTrigger, val,
 		)
 	}
 	fmt.Println("===========================================================================")
@@ -276,20 +281,19 @@ func parseBindings(text, modeLetter string) []Row {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
 
-		// human‐readable trigger (e.g. 'T page_up'), then override with modeLetter
-		trigger := humanReadableBind(vec[0].(edn.Keyword))
-		fmt.Println("trigger: ", trigger)
-		if modeLetter != "" {
-			trigger = modeLetter + trigger
-		}
+		// raw trigger and binding
+		rawTrigger := string(vec[0].(edn.Keyword))
+		rawBinding := buildKeySequence(vec[1])
 
-		// build the key sequence string
-		keySeq := buildKeySequence(vec[1])
-		keySeq = humanReadableBind(edn.Keyword(keySeq))
-		fmt.Println("keySeq: ", keySeq)
+		// formatted versions
+		formatTrigger := humanReadableBind(vec[0].(edn.Keyword))
+		if modeLetter != "" {
+			formatTrigger = modeLetter + formatTrigger
+		}
+		formatBinding := humanReadableBind(edn.Keyword(rawBinding))
 
 		// expand each :doc/actions entry into one Row
-		rows = append(rows, collectRows(rawMeta, trigger, keySeq)...)
+		rows = append(rows, collectRows(rawMeta, rawTrigger, formatTrigger, rawBinding, formatBinding)...)
 	}
 
 	return rows
