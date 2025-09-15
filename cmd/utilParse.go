@@ -64,7 +64,7 @@ func parse() {
 
 	// For example, assume filePath is passed in or defined here.
 	// filePath := "your_edn_file.edn"
-	if err := updateConfigFromFile(config, ednFile); err != nil {
+	if err := updateConfigFromFile(config, flags.ednFile); err != nil {
 		fmt.Printf("Error reading EDN file: %v\n", err)
 		return
 	}
@@ -310,7 +310,7 @@ func generateMarkdown(config map[string]KeyConfig) {
 	// 	config.UsedTcPrefix,
 	// )
 
-	mappingComments := extractMappingComments(ednFile)
+	mappingComments := extractMappingComments(flags.ednFile)
 	mappingCommentsSection := ""
 	if len(mappingComments) > 0 {
 		mappingCommentsSection = "\n### Mapping Comments\n"

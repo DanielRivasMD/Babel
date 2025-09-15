@@ -61,9 +61,12 @@ type configDirs struct {
 }
 
 type babelFlags struct {
-	rootDir string
-	program string
-	verbose bool
+	verbose    bool
+	rootDir    string
+	program    string
+	ednFile    string
+	renderMode string
+	sortBy     string
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -89,17 +92,23 @@ func initConfigDirs() {
 	horus.CheckErr(err, horus.WithCategory("init_error"), horus.WithMessage("getting home directory"))
 }
 
+func onelineErr(er string) string {
+	return chalk.Bold.TextStyle(chalk.Red.Color(er))
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: add config for binding interpret & display
 type Row struct {
-	Action  string
-	Command string
-	Program string
+	action  string
+	command string
+	program string
 
-	Trigger  string
-	Binding  string
-	Sequence string
+	rawTrigger    string
+	formattrigger string
+	rawBinding    string
+	formatBinding string
+	sequence      string
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -155,7 +164,7 @@ func filterByProgram(rows []Row, programFilter string) []Row {
 	// filter
 	var out []Row
 	for _, r := range rows {
-		if progRE == nil || progRE.MatchString(r.Program) {
+		if progRE == nil || progRE.MatchString(r.program) {
 			out = append(out, r)
 		}
 	}
@@ -171,6 +180,7 @@ func defaultRootDir() string {
 	return filepath.Join(home, ".saiyajin", "frag")
 }
 
+// TODO: update error habdling
 // resolveEDNFiles returns either the single --file or all .edn under --root
 func resolveEDNFiles(file, root string) []string {
 	if file != "" {
