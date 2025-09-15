@@ -27,7 +27,6 @@ import (
 
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
-	"github.com/ttacon/chalk"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -38,7 +37,8 @@ var interpretCmd = &cobra.Command{
 	Long:    helpInterpret,
 	Example: exampleInterpret,
 
-	Run: runInterpret,
+	PreRun: preInterpret,
+	Run:    runInterpret,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,9 +72,9 @@ func preInterpret(cmd *cobra.Command, args []string) {
 	horus.CheckEmpty(
 		flags.program,
 		"",
-		horus.WithMessage("`--daemon` is required"),
+		horus.WithMessage("`--program` is required"),
 		horus.WithExitCode(2),
-		horus.WithFormatter(func(he *horus.Herror) string { return chalk.Red.Color(he.Message) }),
+		horus.WithFormatter(func(he *horus.Herror) string { return onelineErr(he.Message) }),
 	)
 }
 
@@ -82,18 +82,13 @@ func preInterpret(cmd *cobra.Command, args []string) {
 
 // TODO: upgrade flag checking
 func runInterpret(cmd *cobra.Command, args []string) {
-	if flags.program == "" {
-		log.Fatal("please pass --program (e.g. micro or helix)")
-	}
-	if ednFile == "" && flags.rootDir == "" {
+
+	if flags.ednFile == "" && flags.rootDir == "" {
 		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
 	}
 
 	// resolve EDN file paths
-	paths := resolveEDNFiles(ednFile, flags.rootDir)
-	// if err != nil {
-	// 	log.Fatalf("file resolution error: %v", err)
-	// }
+	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
 
 	// parse all EDN files into rows
 	allRows, err := gatherRowsFromPaths(paths)
@@ -101,56 +96,17 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 
-	// helper to emit one mode
-	emitMode := func(prog string) {
-		// select only that program’s rows
-		rows := filterByProgram(allRows, prog)
-
-		// build raw bindings
-		rawBind := make(map[string]string, len(rows))
-		for _, r := range rows {
-			rawBind[r.Binding] = r.Command
-			fmt.Println("\nrow:")
-			fmt.Println(r)
-		}
-
-		// format them (prefix‐map & bracket‐stripping)
-		formatted := formatBinds(rawBind, prog)
-
-		// emit based on mode type
-		switch prog {
-		case "micro":
-			fmt.Println(rawBind)
-			enc := json.NewEncoder(cmd.OutOrStdout())
-			enc.SetIndent("", "  ")
-			if err := enc.Encode(formatted); err != nil {
-				log.Fatalf("JSON marshal error: %v", err)
-			}
-
-		case "helix-common", "helix-insert", "helix-normal", "helix-select":
-			w := cmd.OutOrStdout()
-			// optional header per mode
-			fmt.Fprintf(w, "# mode: %s\n", prog)
-			for key, val := range formatted {
-				fmt.Fprintf(w, "%s = %s\n", key, val)
-			}
-
-		default:
-			log.Fatalf("unsupported mode %q", prog)
-		}
-	}
-
 	// if user asked for "helix", loop over all four modes
 	if flags.program == "helix" {
 		for _, sub := range []string{"helix-common", "helix-insert", "helix-normal", "helix-select"} {
-			emitMode(sub)
+			emitMode(cmd, allRows, sub)
 			fmt.Fprintln(cmd.OutOrStdout()) // blank line between modes
 		}
 		return
 	}
 
 	// otherwise emit single target
-	emitMode(flags.program)
+	emitMode(cmd, allRows, flags.program)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -244,6 +200,45 @@ func tomlList(raw string) string {
 
 	// join into a TOML array
 	return "[" + strings.Join(quoted, ",") + "]"
+}
+
+// helper to emit one mode
+func emitMode(cmd *cobra.Command, allRows []Row, prog string) {
+	// select only that program’s rows
+	rows := filterByProgram(allRows, prog)
+
+	// build raw bindings
+	rawBind := make(map[string]string, len(rows))
+	for _, r := range rows {
+		rawBind[r.rawBinding] = r.command
+		fmt.Println("\nrow:")
+		fmt.Println(r)
+	}
+
+	// format them (prefix‐map & bracket‐stripping)
+	formatted := formatBinds(rawBind, prog)
+
+	// emit based on mode type
+	switch prog {
+	case "micro":
+		fmt.Println(rawBind)
+		enc := json.NewEncoder(cmd.OutOrStdout())
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(formatted); err != nil {
+			log.Fatalf("JSON marshal error: %v", err)
+		}
+
+	case "helix-common", "helix-insert", "helix-normal", "helix-select":
+		w := cmd.OutOrStdout()
+		// optional header per mode
+		fmt.Fprintf(w, "# mode: %s\n", prog)
+		for key, val := range formatted {
+			fmt.Fprintf(w, "%s = %s\n", key, val)
+		}
+
+	default:
+		log.Fatalf("unsupported mode %q", prog)
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
