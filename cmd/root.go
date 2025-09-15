@@ -50,19 +50,27 @@ func Execute() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: update as struct for flags
 var (
-	verbose bool
-	program string
-	rootDir string
+	dirs  configDirs
+	flags babelFlags
 )
+
+type configDirs struct {
+	home string
+}
+
+type babelFlags struct {
+	rootDir string
+	program string
+	verbose bool
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose diagnostics")
-	rootCmd.PersistentFlags().StringVarP(&program, "program", "p", "", "Regex or substring to filter Program names (e.g. helix)")
-	rootCmd.PersistentFlags().StringVarP(&rootDir, "root", "R", defaultRootDir(), "Config root (recurses .edn files)")
+	rootCmd.PersistentFlags().BoolVarP(&flags.verbose, "verbose", "v", false, "Enable verbose diagnostics")
+	rootCmd.PersistentFlags().StringVarP(&flags.program, "program", "", "", "Regex or substring to filter Program names (e.g. helix)")
+	rootCmd.PersistentFlags().StringVarP(&flags.rootDir, "root", "", defaultRootDir(), "Config root (recurses .edn files)")
 
 	horus.CheckErr(
 		displayCmd.RegisterFlagCompletionFunc("program", completePrograms),
@@ -70,6 +78,14 @@ func init() {
 		horus.WithMessage("registering config completion for flag program"),
 	)
 
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func initConfigDirs() {
+	var err error
+	dirs.home, err = domovoi.FindHome(flags.verbose)
+	horus.CheckErr(err, horus.WithCategory("init_error"), horus.WithMessage("getting home directory"))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
