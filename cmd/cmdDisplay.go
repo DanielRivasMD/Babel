@@ -188,7 +188,7 @@ func collectRows(rawMeta map[edn.Keyword]any, rawTrigger, formatTrigger, rawBind
 			command:       fetch(edn.Keyword("exec")),
 			program:       fetch(edn.Keyword("program")),
 			rawTrigger:    rawTrigger,
-			formattrigger: formatTrigger,
+			formatTrigger: formatTrigger,
 			rawBinding:    rawBinding,
 			formatBinding: formatBinding,
 			sequence:      fetch(edn.Keyword("sequence")),

@@ -105,10 +105,14 @@ type Row struct {
 	program string
 
 	rawTrigger    string
-	formattrigger string
+	formatTrigger string
 	rawBinding    string
 	formatBinding string
 	sequence      string
+}
+
+func (r Row) Print() string {
+	return fmt.Sprintf("action: %s\ncommand: %s\nprogram: %s\ntrigger: %s - %s\nbinding: %s - %s", r.action, r.command, r.program, r.rawTrigger, r.formatTrigger, r.rawBinding, r.formatTrigger)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

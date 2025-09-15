@@ -211,8 +211,7 @@ func emitMode(cmd *cobra.Command, allRows []Row, prog string) {
 	rawBind := make(map[string]string, len(rows))
 	for _, r := range rows {
 		rawBind[r.rawBinding] = r.command
-		fmt.Println("\nrow:")
-		fmt.Println(r)
+		fmt.Println(r.Print())
 	}
 
 	// format them (prefix‐map & bracket‐stripping)
