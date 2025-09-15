@@ -71,7 +71,7 @@ func parse() {
 
 	generateMarkdown(config)
 
-	if verbose {
+	if flags.verbose {
 		fmt.Printf("Generated layout using TC variable: '%s'\n", TC)
 		fmt.Printf("Output: %s/%s\n", OutputDir, OutputFile)
 	}

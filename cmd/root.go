@@ -28,6 +28,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
 	"github.com/ttacon/chalk"
@@ -113,23 +114,30 @@ func completePrograms(cmd *cobra.Command, args []string, toComplete string) ([]s
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// gatherRows validates flags, reads all EDN files and returns every parsed Row.
-func gatherRows(ednFile, rootDir string) []Row {
-	// require flags
-	if ednFile == "" && rootDir == "" {
-		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
+func parseEDNFile(path string) ([]Row, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", path, err)
 	}
-
-	// collect all EDN rows into []Row
-	files := resolveFiles(ednFile, rootDir)
-	var allRows []Row
-	for _, path := range files {
-		text := loadEDNFile(path)
-		mode := extractMode(text)
-		allRows = append(allRows, parseBindings(text, mode)...)
-	}
-	return allRows
+	text := string(data)
+	mode := extractMode(text)
+	rows := parseBindings(text, mode)
+	return rows, nil
 }
+
+func gatherRowsFromPaths(paths []string) ([]Row, error) {
+	var allRows []Row
+	for _, path := range paths {
+		rows, err := parseEDNFile(path)
+		if err != nil {
+			return nil, err
+		}
+		allRows = append(allRows, rows...)
+	}
+	return allRows, nil
+}
+
+// TODO: validate flags on prerun
 
 // filterByProgram applies the optional programFilter regex to a slice of Rows.
 // If programFilter is empty, it returns rows unmodified.
@@ -154,6 +162,7 @@ func filterByProgram(rows []Row, programFilter string) []Row {
 	return out
 }
 
+// TODO: update default root dir definition
 func defaultRootDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -162,8 +171,8 @@ func defaultRootDir() string {
 	return filepath.Join(home, ".saiyajin", "frag")
 }
 
-// resolveFiles returns either the single --file or all .edn under --root
-func resolveFiles(file, root string) []string {
+// resolveEDNFiles returns either the single --file or all .edn under --root
+func resolveEDNFiles(file, root string) []string {
 	if file != "" {
 		return []string{file}
 	}
