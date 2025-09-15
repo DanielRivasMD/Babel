@@ -98,59 +98,6 @@ func runDisplay(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// humanReadableBind rewrites a Keyword like ":!Tpage_up" → "T page_up"
-func humanReadableBind(raw edn.Keyword) string {
-	s := string(raw)
-	s = strings.TrimPrefix(s, ":")
-	s = strings.TrimPrefix(s, "!")
-	parts := strings.SplitN(s, "#P", 2) // group#Pname
-	group := parts[0]
-	name := ""
-	if len(parts) > 1 {
-		name = parts[1]
-	}
-	// replace arrows & modifiers
-	r := strings.NewReplacer(
-		"page_up", "pgup",
-		"page_down", "pgdw",
-
-		"up_arrow", "↑",
-		"down_arrow", "↓",
-		"right_arrow", "→",
-		"left_arrow", "←",
-
-		"left_shift", "<S>",
-		"left_control", "<T>",
-		"left_option", "<O>",
-		"left_command", "<C>",
-
-		"right_shift", "<R>",
-		"right_control", "<W>",
-		"right_option", "<E>",
-		"right_command", "<Q>",
-
-		"tab", "TAB",
-		"delete_or_backspace", "DEL",
-		"return_or_enter", "RET",
-		"caps_lock", "<P>",
-		"spacebar", "<_>",
-
-		"hyphen", "-",
-		"equal_sign", "=",
-		"open_bracket", "[",
-		"close_bracket", "]",
-		"semicolon", ";",
-		"quote", "'",
-		"backslash", "\\",
-		"comma", ",",
-		"period", ".",
-		"slash", "/",
-
-		"non_us_pound", "•",
-	)
-	return r.Replace(fmt.Sprintf("%s %s", group, name))
-}
-
 // buildKeySequence joins the second element of the rule vector into a string
 func buildKeySequence(x any) string {
 	switch kv := x.(type) {
@@ -254,49 +201,6 @@ func emitTable(rows []Row) {
 		)
 	}
 	fmt.Println("===========================================================================")
-}
-
-// take the raw EDN text + mode letter.
-func parseBindings(text, modeLetter string) []Row {
-	var rows []Row
-	pos := 0
-
-	for {
-		// find the next ^{…}[…] block
-		metaStr, vecStr, nextPos, ok := extractEntry(text, pos)
-		if !ok {
-			break
-		}
-		pos = nextPos
-
-		// decode metadata
-		rawMeta, err := decodeMetadata(metaStr)
-		if err != nil {
-			log.Fatalf("EDN metadata unmarshal error: %v", err)
-		}
-
-		// decode the rule vector
-		vec, err := decodeRule(vecStr)
-		if err != nil {
-			log.Fatalf("EDN rule decode error: %v", err)
-		}
-
-		// raw trigger and binding
-		rawTrigger := string(vec[0].(edn.Keyword))
-		rawBinding := buildKeySequence(vec[1])
-
-		// formatted versions
-		formatTrigger := humanReadableBind(vec[0].(edn.Keyword))
-		if modeLetter != "" {
-			formatTrigger = modeLetter + formatTrigger
-		}
-		formatBinding := humanReadableBind(edn.Keyword(rawBinding))
-
-		// expand each :doc/actions entry into one Row
-		rows = append(rows, collectRows(rawMeta, rawTrigger, formatTrigger, rawBinding, formatBinding)...)
-	}
-
-	return rows
 }
 
 // extractMode finds the first symbol immediately under :rules,

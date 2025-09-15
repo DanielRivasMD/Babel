@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 
 	"github.com/DanielRivasMD/horus"
@@ -49,10 +48,7 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var fnRe = regexp.MustCompile(`^([OESRTWCQ]+)(f[0-9]+)$`)
-var charRe = regexp.MustCompile(`^([OESRTWCQ]+)([a-z])$`)
-
-var prefixMaps = map[string]map[rune]string{
+var prefix = map[string]map[rune]string{
 	"micro": {
 		'O': "Alt", 'E': "Alt",
 		'T': "Ctrl", 'W': "Ctrl",
@@ -76,16 +72,19 @@ func preInterpret(cmd *cobra.Command, args []string) {
 		horus.WithExitCode(2),
 		horus.WithFormatter(func(he *horus.Herror) string { return onelineErr(he.Message) }),
 	)
+	horus.CheckEmpty(
+		flags.rootDir,
+		"",
+		horus.WithMessage("`--root` is required"),
+		horus.WithExitCode(2),
+		horus.WithFormatter(func(he *horus.Herror) string { return onelineErr(he.Message) }),
+	)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: upgrade flag checking
 func runInterpret(cmd *cobra.Command, args []string) {
-
-	if flags.ednFile == "" && flags.rootDir == "" {
-		log.Fatal("please pass --file <path>.edn or --root <config-dir>")
-	}
 
 	// resolve EDN file paths
 	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
@@ -114,10 +113,10 @@ func runInterpret(cmd *cobra.Command, args []string) {
 // TODO: refactor as default flag
 // helper to pick the prefixMap for a given target
 func getPrefixMap(target string) map[rune]string {
-	if pm, ok := prefixMaps[target]; ok {
+	if pm, ok := prefix[target]; ok {
 		return pm
 	}
-	return prefixMaps["helix"]
+	return prefix["helix"]
 }
 
 // normalizeKey trims whitespace and any leading EDN prefix ":!"
@@ -136,7 +135,7 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 
 		key := normalizeKey(k)
 		prettyKey := key
-		if m := fnRe.FindStringSubmatch(key); m != nil {
+		if m := rg["fn"].FindStringSubmatch(key); m != nil {
 			prefixRunes, fnPart := m[1], m[2]
 			var parts []string
 			for _, r := range prefixRunes {
@@ -146,7 +145,7 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 			}
 			parts = append(parts, strings.ToUpper(fnPart))
 			prettyKey = strings.Join(parts, "-")
-		} else if m := charRe.FindStringSubmatch(key); m != nil {
+		} else if m := rg["ch"].FindStringSubmatch(key); m != nil {
 			prefixRunes, charPart := m[1], m[2]
 			var parts []string
 			for _, r := range prefixRunes {
@@ -211,7 +210,6 @@ func emitMode(cmd *cobra.Command, allRows []Row, prog string) {
 	rawBind := make(map[string]string, len(rows))
 	for _, r := range rows {
 		rawBind[r.rawBinding] = r.command
-		fmt.Println(r.Print())
 	}
 
 	// format them (prefix‐map & bracket‐stripping)
@@ -220,7 +218,6 @@ func emitMode(cmd *cobra.Command, allRows []Row, prog string) {
 	// emit based on mode type
 	switch prog {
 	case "micro":
-		fmt.Println(rawBind)
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(formatted); err != nil {
