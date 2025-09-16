@@ -36,7 +36,14 @@ func formatTrigger(k KeySeq, program string) string {
 	if lookup == nil {
 		lookup = triggerLookups["default"]
 	}
-	return k.Mode + " " + lookup(k.Modifier) + "-" + lookup(k.Key)
+
+	var modParts []string
+	for _, r := range k.Modifier {
+		modParts = append(modParts, lookup(string(r)))
+	}
+	mod := strings.Join(modParts, "-")
+
+	return k.Mode + " " + mod + "-" + lookup(k.Key)
 }
 
 func formatBinding(b BindingEntry, program string) string {
@@ -44,11 +51,19 @@ func formatBinding(b BindingEntry, program string) string {
 	if lookup == nil {
 		lookup = triggerLookups["default"]
 	}
+
 	key := b.Sequence
 	if key == "" {
 		key = b.Binding.Key
 	}
-	return lookup(b.Binding.Modifier) + "-" + lookup(key)
+
+	var modParts []string
+	for _, r := range b.Binding.Modifier {
+		modParts = append(modParts, lookup(string(r)))
+	}
+	mod := strings.Join(modParts, "-")
+
+	return mod + "-" + lookup(key)
 }
 
 type Formatter struct {
@@ -64,18 +79,6 @@ func loadTriggerFormat(path string) TriggerFormatConfig {
 		log.Fatalf("failed to load trigger format config: %v", err)
 	}
 	return cfg
-}
-
-func buildReplacers(cfg TriggerFormatConfig) map[string]*strings.Replacer {
-	out := make(map[string]*strings.Replacer)
-	for program, mapping := range cfg {
-		var pairs []string
-		for k, v := range mapping {
-			pairs = append(pairs, k, v)
-		}
-		out[program] = strings.NewReplacer(pairs...)
-	}
-	return out
 }
 
 type TriggerLookup func(string) string
