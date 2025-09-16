@@ -40,6 +40,7 @@ func parseBinding(rawMeta map[edn.Keyword]any, vec []any, mode string) *BindingE
 	}
 
 	var actions []ProgramAction
+	var seq string
 	for _, a := range acts {
 		m, ok := a.(map[any]any)
 		if !ok {
@@ -50,12 +51,10 @@ func parseBinding(rawMeta map[edn.Keyword]any, vec []any, mode string) *BindingE
 			Action:  fmt.Sprint(m[edn.Keyword("name")]),
 			Command: fmt.Sprint(m[edn.Keyword("exec")]),
 		})
-	}
 
-	// Optional sequence
-	seq := ""
-	if v, ok := rawMeta[edn.Keyword("sequence")]; ok {
-		seq = fmt.Sprint(v)
+		if raw, ok := m[edn.Keyword("sequence")]; ok && raw != nil {
+			seq = fmt.Sprint(m[edn.Keyword("sequence")])
+		}
 	}
 
 	return &BindingEntry{

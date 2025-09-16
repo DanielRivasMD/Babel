@@ -68,8 +68,6 @@ func formatBinding(b BindingEntry, program string) string {
 		key = b.Binding.Key
 	}
 
-	fmt.Println("DEBUG: ", b)
-
 	var modParts []string
 	for _, r := range b.Binding.Modifier {
 		modParts = append(modParts, lookup(string(r)))
