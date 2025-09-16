@@ -8,13 +8,29 @@ right_arrow = "→"
 tab = "TAB"
 spacebar = "<_>"
 
+# You can add more programs here
+# [broot]
+# O = "Meta"
+# T = "Control"
+
+
 [micro]
-left_arrow = "Ctrl"
-right_arrow = "Ctrl"
 page_up = "PgUp"
 page_down = "PgDn"
+O = "Alt"
+E = "Alt"
+T = "Ctrl"
+W = "Ctrl"
+S = "Shift"
+R = "Shift"
 
 [helix]
+O = "A"
+E = "A"
+T = "C"
+W = "C"
+S = "S"
+R = "S"
 left_arrow = "left"
 right_arrow = "right"
 page_up = "page-up"
