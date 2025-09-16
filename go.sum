@@ -1,3 +1,5 @@
+github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
+github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/DanielRivasMD/domovoi v0.0.0-20250910075839-83597940b8dd h1:SSek5Aokafvx/IgEYRqyOTt2nFlgr8mX6KI/fPSjkWI=
 github.com/DanielRivasMD/domovoi v0.0.0-20250910075839-83597940b8dd/go.mod h1:A+G3Z0BTecntlot/13Yy1AYgnbD2hmyZ8Q9CURuDtog=
 github.com/DanielRivasMD/horus v0.0.0-20250904055742-a30876ce2555 h1:0Iq1dIHaYSQEmCUpDRTcHnpyIYGxJrbUfvajZWv8cJs=

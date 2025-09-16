@@ -3,6 +3,7 @@ module github.com/DanielRivasMD/Babel
 go 1.23.4
 
 require (
+	github.com/BurntSushi/toml v1.5.0
 	github.com/DanielRivasMD/domovoi v0.0.0-20250910075839-83597940b8dd
 	github.com/DanielRivasMD/horus v0.0.0-20250904055742-a30876ce2555
 	github.com/spf13/cobra v1.9.1
