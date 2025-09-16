@@ -50,7 +50,7 @@ var rg = map[string]*regexp.Regexp{
 	"ch": regexp.MustCompile(`^([OESRTWCQ]+)([a-z])$`),
 	"nb": regexp.MustCompile(`^([OESRTWCQ]+)([0-9])$`),
 	"ot": regexp.MustCompile(`^([OESRTWCQ]+)([a-z_]+)$`),
-	"kw": regexp.MustCompile(`^([OESRTWCQ]+)#P(.+)$`), // fallback for keywords like "!O#Ppage_up"
+	"kw": regexp.MustCompile(`^([OESRTWCQ]*)#P(.+)$`), // fallback for keywords like "!O#Ppage_up"
 }
 
 var (
