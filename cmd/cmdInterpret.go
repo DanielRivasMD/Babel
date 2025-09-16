@@ -62,6 +62,26 @@ var prefix = map[string]map[rune]string{
 	// TODO: add more targets here, e.g. "broot", lazygit, serpl: { }
 }
 
+var keyMap = map[string]map[string]string{
+	"micro": {
+		"left_arrow":  "Ctrl",
+		"right_arrow": "Ctrl",
+		"up_arrow":    "Ctrl",
+		"down_arrow":  "Ctrl",
+		"page_up":     "PgUp",
+		"page_down":   "PgDn",
+	},
+	"helix": {
+		"left_arrow":  "left",
+		"right_arrow": "right",
+		"up_arrow":    "up",
+		"down_arrow":  "down",
+		"page_up":     "page-up",
+		"page_down":   "page-down",
+	},
+	// TODO: add more targets like "broot", "lazygit", etc.
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func preInterpret(cmd *cobra.Command, args []string) {
@@ -85,27 +105,40 @@ func preInterpret(cmd *cobra.Command, args []string) {
 
 // TODO: upgrade flag checking
 func runInterpret(cmd *cobra.Command, args []string) {
+	// Validate flags (should be done in preInterpret)
+	if flags.program == "" {
+		log.Fatalf("missing --program")
+	}
+	if flags.rootDir == "" && flags.ednFile == "" {
+		log.Fatalf("missing --root or --file")
+	}
 
-	// resolve EDN file paths
+	// Resolve EDN file paths
 	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
 
-	// parse all EDN files into rows
-	allRows, err := gatherRowsFromPaths(paths)
+	// Parse all EDN files into structured bindings
+	allEntries, err := gatherRowsFromPaths(paths)
 	if err != nil {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 
-	// if user asked for "helix", loop over all four modes
+	fmt.Println("ALL ENTRIES")
+	for _, e := range allEntries {
+		fmt.Println(e)
+	}
+	// fmt.Println(allEntries)
+
+	// Emit for multiple Helix modes
 	if flags.program == "helix" {
 		for _, sub := range []string{"helix-common", "helix-insert", "helix-normal", "helix-select"} {
-			emitMode(cmd, allRows, sub)
-			fmt.Fprintln(cmd.OutOrStdout()) // blank line between modes
+			emitBindings(cmd, allEntries, sub)
+			fmt.Fprintln(cmd.OutOrStdout())
 		}
 		return
 	}
 
-	// otherwise emit single target
-	emitMode(cmd, allRows, flags.program)
+	// Emit for single target
+	emitBindings(cmd, allEntries, flags.program)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,10 +152,11 @@ func getPrefixMap(target string) map[rune]string {
 	return prefix["helix"]
 }
 
-// normalizeKey trims whitespace and any leading EDN prefix ":!"
-func normalizeKey(raw string) string {
-	s := strings.TrimSpace(raw)
-	return strings.TrimPrefix(s, ":!")
+func getKeyMap(program string) map[string]string {
+	if km, ok := keyMap[program]; ok {
+		return km
+	}
+	return keyMap["helix"] // default fallback
 }
 
 // formatBinds converts raw keys like "OTf1" → "Alt-Ctrl-F1"
@@ -132,9 +166,9 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 	pm := getPrefixMap(program)
 
 	for k, v := range raw {
-
-		key := normalizeKey(k)
+		key := stripEDNPrefix(k)
 		prettyKey := key
+
 		if m := rg["fn"].FindStringSubmatch(key); m != nil {
 			prefixRunes, fnPart := m[1], m[2]
 			var parts []string
@@ -143,8 +177,16 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 					parts = append(parts, txt)
 				}
 			}
-			parts = append(parts, strings.ToUpper(fnPart))
+			km := getKeyMap(program)
+			if mapped, ok := km[fnPart]; ok {
+				parts = append(parts, mapped)
+			} else {
+				parts = append(parts, strings.ToUpper(fnPart))
+			}
+
+			// parts = append(parts, strings.ToUpper(fnPart))
 			prettyKey = strings.Join(parts, "-")
+
 		} else if m := rg["ch"].FindStringSubmatch(key); m != nil {
 			prefixRunes, charPart := m[1], m[2]
 			var parts []string
@@ -201,22 +243,27 @@ func tomlList(raw string) string {
 	return "[" + strings.Join(quoted, ",") + "]"
 }
 
-// helper to emit one mode
-func emitMode(cmd *cobra.Command, allRows []Row, prog string) {
-	// select only that program’s rows
-	rows := filterByProgram(allRows, prog)
+func emitBindings(cmd *cobra.Command, entries []BindingEntry, target string) {
+	// Filter actions by target program
+	filtered := filterByProgram(entries, target)
 
-	// build raw bindings
-	rawBind := make(map[string]string, len(rows))
-	for _, r := range rows {
-		rawBind[r.rawBinding] = r.command
+	// Build raw binding map: key → command
+	rawBind := make(map[string]string)
+	for _, entry := range filtered {
+		for _, act := range entry.Actions {
+			// Use modifier + key as binding identifier
+			bindKey := entry.Binding.Modifier + "-" + strings.ToUpper(entry.Binding.Key)
+			rawBind[bindKey] = act.Command
+		}
 	}
 
-	// format them (prefix‐map & bracket‐stripping)
-	formatted := formatBinds(rawBind, prog)
+	fmt.Println(rawBind)
 
-	// emit based on mode type
-	switch prog {
+	// Format bindings for output
+	formatted := formatBinds(rawBind, target)
+
+	// Emit based on target format
+	switch target {
 	case "micro":
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
@@ -226,14 +273,13 @@ func emitMode(cmd *cobra.Command, allRows []Row, prog string) {
 
 	case "helix-common", "helix-insert", "helix-normal", "helix-select":
 		w := cmd.OutOrStdout()
-		// optional header per mode
-		fmt.Fprintf(w, "# mode: %s\n", prog)
+		fmt.Fprintf(w, "# mode: %s\n", target)
 		for key, val := range formatted {
 			fmt.Fprintf(w, "%s = %s\n", key, val)
 		}
 
 	default:
-		log.Fatalf("unsupported mode %q", prog)
+		log.Fatalf("unsupported --program %q", target)
 	}
 }
 
