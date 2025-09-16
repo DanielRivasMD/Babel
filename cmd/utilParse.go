@@ -102,25 +102,24 @@ func parseEDNFile(path string) ([]BindingEntry, error) {
 }
 
 // stripEDNPrefix trims whitespace and any leading EDN prefix ":!"
-func stripEDNPrefix(raw string) string {
-	s := strings.TrimSpace(raw)
-	return strings.TrimPrefix(s, ":!")
-}
-
-// splitEDNKey rewrites a Keyword like ":!Tpage_up" → "T page_up"
-func splitEDNKey(str string) (string, string) {
+func stripEDNPrefix(str string) string {
+	str = strings.TrimSpace(str)
 	str = strings.TrimPrefix(str, ":")
 	str = strings.TrimPrefix(str, "!")
-	// if str == "" {
-	// 	return "", ""
-	// }
-	parts := strings.SplitN(str, "#P", 2) // group#Pname
-	modifier := parts[0]
-	key := ""
-	if len(parts) > 1 {
-		key = parts[1]
+	return str
+}
+
+func splitEDNKey(str string) (string, string) {
+	str = stripEDNPrefix(str)
+
+	for _, re := range rg {
+		if m := re.FindStringSubmatch(str); len(m) == 3 {
+			return m[1], m[2] // modifier, key
+		}
 	}
-	return modifier, key
+
+	// fallback: treat entire string as key, no modifier
+	return "", str
 }
 
 // extractEntry finds the next ^{…}[…] pair, returns meta & vector & new position
