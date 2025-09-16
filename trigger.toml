@@ -1,0 +1,21 @@
+[default]
+page_up = "pgup"
+page_down = "pgdw"
+up_arrow = "↑"
+down_arrow = "↓"
+left_arrow = "←"
+right_arrow = "→"
+tab = "TAB"
+spacebar = "<_>"
+
+[micro]
+left_arrow = "Ctrl"
+right_arrow = "Ctrl"
+page_up = "PgUp"
+page_down = "PgDn"
+
+[helix]
+left_arrow = "left"
+right_arrow = "right"
+page_up = "page-up"
+page_down = "page-down"
