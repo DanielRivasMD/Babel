@@ -20,6 +20,7 @@ import (
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var bindingLookups = buildLookupFuncs(loadBindingFormat("binding.toml"))
 var triggerLookups = buildLookupFuncs(loadTriggerFormat("trigger.toml"))
 
 func normalizeProgram(p string) string {
@@ -47,15 +48,17 @@ func formatTrigger(k KeySeq, program string) string {
 }
 
 func formatBinding(b BindingEntry, program string) string {
-	lookup := triggerLookups[normalizeProgram(program)]
+	lookup := bindingLookups[normalizeProgram(program)]
 	if lookup == nil {
-		lookup = triggerLookups["default"]
+		lookup = bindingLookups["default"]
 	}
 
 	key := b.Sequence
 	if key == "" {
 		key = b.Binding.Key
 	}
+
+	fmt.Println("DEBUG: ", b)
 
 	var modParts []string
 	for _, r := range b.Binding.Modifier {
@@ -71,6 +74,16 @@ type Formatter struct {
 	Binding func(BindingEntry, string) string
 }
 
+type BindingFormatConfig map[string]map[string]string
+
+func loadBindingFormat(path string) BindingFormatConfig {
+	var cfg BindingFormatConfig
+	if _, err := toml.DecodeFile(path, &cfg); err != nil {
+		log.Fatalf("failed to load binding format config: %v", err)
+	}
+	return cfg
+}
+
 type TriggerFormatConfig map[string]map[string]string
 
 func loadTriggerFormat(path string) TriggerFormatConfig {
@@ -83,23 +96,26 @@ func loadTriggerFormat(path string) TriggerFormatConfig {
 
 type TriggerLookup func(string) string
 
-func buildLookupFuncs(cfg TriggerFormatConfig) map[string]TriggerLookup {
+func buildLookupFuncs(cfg map[string]map[string]string) map[string]TriggerLookup {
 	defaultMap := cfg["default"]
 	out := make(map[string]TriggerLookup)
 
 	for program, mapping := range cfg {
-		local := mapping
-		out[program] = func(key string) string {
-			if val, ok := local[key]; ok {
-				return val // ✅ program-specific wins
+		local := mapping // capture per iteration
+
+		out[program] = func(local map[string]string) TriggerLookup {
+			return func(key string) string {
+				if val, ok := local[key]; ok {
+					return val
+				}
+				if val, ok := defaultMap[key]; ok {
+					return val
+				}
+				return key
 			}
-			if val, ok := defaultMap[key]; ok {
-				return val // ✅ fallback to default
-			}
-			return key // ✅ raw if missing everywhere
-		}
+		}(local) // pass explicitly
 	}
-	// Ensure default is present
+
 	out["default"] = func(key string) string {
 		if val, ok := defaultMap[key]; ok {
 			return val
