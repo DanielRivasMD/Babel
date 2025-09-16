@@ -18,7 +18,6 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 
 	"github.com/DanielRivasMD/horus"
@@ -59,47 +58,47 @@ func init() {
 // TODO: update error handlers
 // TODO: simplify run call
 func runDisplay(cmd *cobra.Command, args []string) {
-	// resolve EDN file paths
+	// Resolve EDN file paths
 	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
-	// if err != nil {
-	// 	log.Fatalf("file resolution error: %v", err)
-	// }
 
-	// parse all EDN files into rows
-	allRows, err := gatherRowsFromPaths(paths)
+	// Parse all EDN files into structured bindings
+	allEntries, err := gatherRowsFromPaths(paths)
 	if err != nil {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 
-	progFiltered := filterByProgram(allRows, flags.program)
+	// Filter by program
+	filtered := filterByProgram(allEntries, flags.program)
 
-	var finalRows []Row
-	mode := strings.ToUpper(flags.renderMode)
-	for _, r := range progFiltered {
-		switch mode {
-		case "FULL":
-			finalRows = append(finalRows, r)
-
-		case "EMPTY":
-			if r.program == "" && r.action == "" {
-				finalRows = append(finalRows, r)
+	// Apply render mode
+	var final []BindingEntry
+	switch strings.ToUpper(flags.renderMode) {
+	case "FULL":
+		final = filtered
+	case "EMPTY":
+		for _, e := range filtered {
+			if len(e.Actions) == 0 {
+				final = append(final, e)
 			}
-
-		default: // "DEFAULT"
-			if r.program != "" && r.action != "" {
-				finalRows = append(finalRows, r)
+		}
+	default: // "DEFAULT"
+		for _, e := range filtered {
+			if len(e.Actions) > 0 {
+				final = append(final, e)
 			}
 		}
 	}
 
-	// emit a single table from allRows
-	emitTable(finalRows)
+	emitTable(final)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // buildKeySequence joins the second element of the rule vector into a string
 func buildKeySequence(x any) string {
+	// if x == nil {
+	// 	return ""
+	// }
 	switch kv := x.(type) {
 	case []any:
 		parts := make([]string, len(kv))
@@ -112,95 +111,71 @@ func buildKeySequence(x any) string {
 	}
 }
 
-// collectRows expands each :doc/actions into one or more Rows
-func collectRows(rawMeta map[edn.Keyword]any, rawTrigger, formatTrigger, rawBinding, formatBinding string) []Row {
-	var out []Row
+func collectRows(rawMeta map[edn.Keyword]any, trigger, binding KeySeq) []BindingEntry {
+	var out []BindingEntry
 	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
 	if !ok {
 		return out
 	}
+
+	var actions []ProgramAction
 	for _, a := range acts {
 		m, ok := a.(map[any]any)
 		if !ok {
 			continue
 		}
-		fetch := func(k any) string {
+		fetch := func(k edn.Keyword) string {
 			if v, ok := m[k]; ok {
 				return fmt.Sprint(v)
 			}
 			return ""
 		}
-		out = append(out, Row{
-			action:        fetch(edn.Keyword("name")),
-			command:       fetch(edn.Keyword("exec")),
-			program:       fetch(edn.Keyword("program")),
-			rawTrigger:    rawTrigger,
-			formatTrigger: formatTrigger,
-			rawBinding:    rawBinding,
-			formatBinding: formatBinding,
-			sequence:      fetch(edn.Keyword("sequence")),
+		actions = append(actions, ProgramAction{
+			Action:  fetch("name"),
+			Command: fetch("exec"),
+			Program: fetch("program"),
 		})
 	}
-	return out
+
+	return []BindingEntry{{
+		Trigger:  trigger,
+		Binding:  binding,
+		Sequence: "", // optional: fetch(edn.Keyword("sequence"))
+		Actions:  actions,
+	}}
 }
 
 // emitTable prints all rows as a Markdown table, sorted by --sort
-func emitTable(rows []Row) {
-	if len(rows) == 0 {
+func emitTable(entries []BindingEntry) {
+	if len(entries) == 0 {
 		fmt.Println("No bindings found.")
 		return
 	}
 
-	// 0) normalize sort key
-	key := flags.sortBy
-	switch key {
-	case "program", "action", "trigger", "binding":
-		// ok
-	default:
-		log.Printf("warning: unknown sort key %q, defaulting to 'trigger'", key)
-		key = "trigger"
+	// Optional: sort by flags.sortBy
+	// You can implement sorting later if needed
+
+	fmt.Println("===================================================================================")
+	fmt.Println("| Program      | Action                         | Trigger         | Binding        |")
+	fmt.Println("|--------------|--------------------------------|------------------|----------------|")
+
+	for _, e := range entries {
+		for _, a := range e.Actions {
+			bind := e.Sequence
+			if bind == "" {
+				bind = e.Binding.Key
+			}
+			fmt.Printf(
+				"| %-12s | %-30s | %-16s | %-14s |\n",
+				a.Program,
+				a.Action,
+				e.Trigger.Modifier+"-"+e.Trigger.Key,
+				e.Binding.Modifier+"-"+bind,
+			)
+		}
 	}
 
-	// 1) sort in place
-	sort.Slice(rows, func(i, j int) bool {
-		a, b := rows[i], rows[j]
-		switch key {
-		case "program":
-			return a.program < b.program
-		case "action":
-			return a.action < b.action
-		case "binding":
-			// compare Sequence if you prefer it over Binding when present:
-			bi, bj := a.rawBinding, b.rawBinding
-			if a.sequence != "" {
-				bi = a.sequence
-			}
-			if b.sequence != "" {
-				bj = b.sequence
-			}
-			return bi < bj
-		default: // "trigger"
-			return a.rawTrigger < b.rawTrigger
-		}
-	})
-
-	// 2) print header
-	fmt.Println("===========================================================================")
-	fmt.Println("| Program      | Action                         | Trigger    | Binding    |")
-	fmt.Println("|--------------|--------------------------------|------------|------------|")
-
-	// 3) print rows
-	for _, r := range rows {
-		val := r.rawBinding
-		if r.sequence != "" {
-			val = r.sequence
-		}
-		fmt.Printf(
-			"| %-12s | %-30s | %-10s | %-10s |\n",
-			r.program, r.action, r.rawTrigger, val,
-		)
-	}
-	fmt.Println("===========================================================================")
+	fmt.Println("===================================================================================")
 }
 
 // extractMode finds the first symbol immediately under :rules,
