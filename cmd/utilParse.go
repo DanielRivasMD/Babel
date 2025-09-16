@@ -6,12 +6,241 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/ttacon/chalk"
+	"olympos.io/encoding/edn"
 )
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func parseBinding(rawMeta map[edn.Keyword]any, vec []any, mode string) *BindingEntry {
+	if len(vec) < 2 {
+		return nil // malformed rule vector
+	}
+
+	// Parse trigger
+	rawTrigger := string(vec[0].(edn.Keyword))
+	tm, tk := splitEDNKey(rawTrigger)
+	trigger := KeySeq{Mode: mode, Modifier: tm, Key: tk}
+
+	// Parse binding
+	rawBinding := buildKeySequence(vec[1])
+	bm, bk := splitEDNKey(rawBinding)
+	binding := KeySeq{Mode: "", Modifier: bm, Key: bk}
+
+	// Parse actions
+	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
+	if !ok {
+		return nil
+	}
+
+	var actions []ProgramAction
+	for _, a := range acts {
+		m, ok := a.(map[any]any)
+		if !ok {
+			continue
+		}
+		actions = append(actions, ProgramAction{
+			Program: fmt.Sprint(m[edn.Keyword("program")]),
+			Action:  fmt.Sprint(m[edn.Keyword("name")]),
+			Command: fmt.Sprint(m[edn.Keyword("exec")]),
+		})
+	}
+
+	// Optional sequence
+	seq := ""
+	if v, ok := rawMeta[edn.Keyword("sequence")]; ok {
+		seq = fmt.Sprint(v)
+	}
+
+	return &BindingEntry{
+		Trigger:  trigger,
+		Binding:  binding,
+		Sequence: seq,
+		Actions:  actions,
+	}
+}
+
+func parseBindings(text, mode string) []BindingEntry {
+	var entries []BindingEntry
+	pos := 0
+
+	for {
+		metaStr, vecStr, nextPos, ok := extractEntry(text, pos)
+		if !ok {
+			break
+		}
+		pos = nextPos
+
+		rawMeta, err := decodeMetadata(metaStr)
+		if err != nil {
+			log.Fatalf("EDN metadata unmarshal error: %v", err)
+		}
+
+		vec, err := decodeRule(vecStr)
+		if err != nil {
+			log.Fatalf("EDN rule decode error: %v", err)
+		}
+
+		if entry := parseBinding(rawMeta, vec, mode); entry != nil {
+			entries = append(entries, *entry)
+		}
+	}
+
+	return entries
+}
+
+func parseEDNFile(path string) ([]BindingEntry, error) {
+	text := loadEDNFile(path)
+	mode := extractMode(text)
+	return parseBindings(text, mode), nil
+}
+
+// stripEDNPrefix trims whitespace and any leading EDN prefix ":!"
+func stripEDNPrefix(raw string) string {
+	s := strings.TrimSpace(raw)
+	return strings.TrimPrefix(s, ":!")
+}
+
+// splitEDNKey rewrites a Keyword like ":!Tpage_up" → "T page_up"
+func splitEDNKey(str string) (string, string) {
+	str = strings.TrimPrefix(str, ":")
+	str = strings.TrimPrefix(str, "!")
+	// if str == "" {
+	// 	return "", ""
+	// }
+	parts := strings.SplitN(str, "#P", 2) // group#Pname
+	modifier := parts[0]
+	key := ""
+	if len(parts) > 1 {
+		key = parts[1]
+	}
+	return modifier, key
+}
+
+// extractEntry finds the next ^{…}[…] pair, returns meta & vector & new position
+func extractEntry(text string, startPos int) (metaStr, vecStr string, nextPos int, ok bool) {
+	// find next caret
+	delta := strings.IndexRune(text[startPos:], '^')
+	if delta < 0 {
+		return "", "", 0, false
+	}
+	i := startPos + delta
+
+	// skip whitespace, expect '{'
+	j := i + 1
+	for j < len(text) && unicode.IsSpace(rune(text[j])) {
+		j++
+	}
+	if j >= len(text) || text[j] != '{' {
+		return extractEntry(text, i+1)
+	}
+
+	// extract metadata map literal
+	braceCount := 0
+	k := j
+metaLoop:
+	for ; k < len(text); k++ {
+		switch text[k] {
+		case '{':
+			braceCount++
+		case '}':
+			braceCount--
+			if braceCount == 0 {
+				k++ // include closing
+				break metaLoop
+			}
+		}
+	}
+	if braceCount != 0 {
+		return "", "", 0, false
+	}
+	metaEnd := k
+	metaStr = text[j:metaEnd]
+
+	// skip to '['
+	p := metaEnd
+	for p < len(text) && unicode.IsSpace(rune(text[p])) {
+		p++
+	}
+	if p >= len(text) || text[p] != '[' {
+		return extractEntry(text, metaEnd)
+	}
+
+	// extract the vector literal
+	bracketCount := 0
+	q := p
+vecLoop:
+	for ; q < len(text); q++ {
+		switch text[q] {
+		case '[':
+			bracketCount++
+		case ']':
+			bracketCount--
+			if bracketCount == 0 {
+				q++ // include closing
+				break vecLoop
+			}
+		}
+	}
+	if bracketCount != 0 {
+		return "", "", 0, false
+	}
+	vecEnd := q
+	vecStr = text[p:vecEnd]
+	return metaStr, vecStr, vecEnd, true
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func gatherRowsFromPaths(paths []string) ([]BindingEntry, error) {
+	var all []BindingEntry
+	for _, path := range paths {
+		entries, err := parseEDNFile(path)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, entries...)
+	}
+	return all, nil
+}
+
+// TODO: validate flags on prerun
+
+// filterByProgram applies the optional programFilter regex to a slice of Rows.
+// If programFilter is empty, it returns rows unmodified.
+func filterByProgram(entries []BindingEntry, programFilter string) []BindingEntry {
+	if programFilter == "" {
+		return entries
+	}
+	progRE, err := regexp.Compile(programFilter)
+	if err != nil {
+		log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
+	}
+
+	var out []BindingEntry
+	for _, e := range entries {
+		var filtered []ProgramAction
+		for _, a := range e.Actions {
+			if progRE.MatchString(a.Program) {
+				filtered = append(filtered, a)
+			}
+		}
+		if len(filtered) > 0 {
+			e.Actions = filtered
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Package-level variable for the TC prefix.
