@@ -93,20 +93,6 @@ func runDisplay(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var triggerReplacers = buildReplacers(loadTriggerFormat("trigger.toml"))
-
-func formatTrigger(k KeySeq, program string) string {
-	r := triggerReplacers[program]
-	if r == nil {
-		r = triggerReplacers["default"]
-	}
-	mod := r.Replace(k.Modifier)
-	key := r.Replace(k.Key)
-	return k.Mode + " " + mod + "-" + key
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // buildKeySequence joins the second element of the rule vector into a string
 func buildKeySequence(x any) string {
 	// if x == nil {

@@ -20,18 +20,35 @@ import (
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var triggerLookups = buildLookupFuncs(loadTriggerFormat("trigger.toml"))
+
+func normalizeProgram(p string) string {
+	switch p {
+	case "helix-common", "helix-insert", "helix-normal", "helix-select":
+		return "helix"
+	default:
+		return p
+	}
+}
+
+func formatTrigger(k KeySeq, program string) string {
+	lookup := triggerLookups[normalizeProgram(program)]
+	if lookup == nil {
+		lookup = triggerLookups["default"]
+	}
+	return k.Mode + " " + lookup(k.Modifier) + "-" + lookup(k.Key)
+}
+
 func formatBinding(b BindingEntry, program string) string {
-	r := triggerReplacers[program]
-	if r == nil {
-		r = triggerReplacers["default"]
+	lookup := triggerLookups[normalizeProgram(program)]
+	if lookup == nil {
+		lookup = triggerLookups["default"]
 	}
 	key := b.Sequence
 	if key == "" {
 		key = b.Binding.Key
 	}
-	mod := r.Replace(b.Binding.Modifier)
-	key = r.Replace(key)
-	return mod + "-" + key
+	return lookup(b.Binding.Modifier) + "-" + lookup(key)
 }
 
 type Formatter struct {
@@ -58,6 +75,35 @@ func buildReplacers(cfg TriggerFormatConfig) map[string]*strings.Replacer {
 		}
 		out[program] = strings.NewReplacer(pairs...)
 	}
+	return out
+}
+
+type TriggerLookup func(string) string
+
+func buildLookupFuncs(cfg TriggerFormatConfig) map[string]TriggerLookup {
+	defaultMap := cfg["default"]
+	out := make(map[string]TriggerLookup)
+
+	for program, mapping := range cfg {
+		local := mapping
+		out[program] = func(key string) string {
+			if val, ok := local[key]; ok {
+				return val // ✅ program-specific wins
+			}
+			if val, ok := defaultMap[key]; ok {
+				return val // ✅ fallback to default
+			}
+			return key // ✅ raw if missing everywhere
+		}
+	}
+	// Ensure default is present
+	out["default"] = func(key string) string {
+		if val, ok := defaultMap[key]; ok {
+			return val
+		}
+		return key
+	}
+
 	return out
 }
 
