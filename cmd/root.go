@@ -52,46 +52,6 @@ var rg = map[string]*regexp.Regexp{
 	"kw": regexp.MustCompile(`^([OESRTWCQ]+)#P(.+)$`), // fallback for keywords like "!O#Ppage_up"
 }
 
-// // replace arrows & modifiers
-// var triggerFormat = strings.NewReplacer(
-// 	"page_up", "pgup",
-// 	"page_down", "pgdw",
-
-// 	"up_arrow", "↑",
-// 	"down_arrow", "↓",
-// 	"right_arrow", "→",
-// 	"left_arrow", "←",
-
-// 	"left_shift", "<S>",
-// 	"left_control", "<T>",
-// 	"left_option", "<O>",
-// 	"left_command", "<C>",
-
-// 	"right_shift", "<R>",
-// 	"right_control", "<W>",
-// 	"right_option", "<E>",
-// 	"right_command", "<Q>",
-
-// 	"tab", "TAB",
-// 	"delete_or_backspace", "DEL",
-// 	"return_or_enter", "RET",
-// 	"caps_lock", "<P>",
-// 	"spacebar", "<_>",
-
-// 	"hyphen", "-",
-// 	"equal_sign", "=",
-// 	"open_bracket", "[",
-// 	"close_bracket", "]",
-// 	"semicolon", ";",
-// 	"quote", "'",
-// 	"backslash", "\\",
-// 	"comma", ",",
-// 	"period", ".",
-// 	"slash", "/",
-
-// 	"non_us_pound", "•",
-// )
-
 var (
 	dirs  configDirs
 	flags babelFlags
