@@ -22,7 +22,6 @@ import (
 
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
-	"olympos.io/encoding/edn"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,6 +93,20 @@ func runDisplay(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var triggerReplacers = buildReplacers(loadTriggerFormat("trigger.toml"))
+
+func formatTrigger(k KeySeq, program string) string {
+	r := triggerReplacers[program]
+	if r == nil {
+		r = triggerReplacers["default"]
+	}
+	mod := r.Replace(k.Modifier)
+	key := r.Replace(k.Key)
+	return k.Mode + " " + mod + "-" + key
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // buildKeySequence joins the second element of the rule vector into a string
 func buildKeySequence(x any) string {
 	// if x == nil {
@@ -111,40 +124,6 @@ func buildKeySequence(x any) string {
 	}
 }
 
-func collectRows(rawMeta map[edn.Keyword]any, trigger, binding KeySeq) []BindingEntry {
-	var out []BindingEntry
-	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
-	if !ok {
-		return out
-	}
-
-	var actions []ProgramAction
-	for _, a := range acts {
-		m, ok := a.(map[any]any)
-		if !ok {
-			continue
-		}
-		fetch := func(k edn.Keyword) string {
-			if v, ok := m[k]; ok {
-				return fmt.Sprint(v)
-			}
-			return ""
-		}
-		actions = append(actions, ProgramAction{
-			Action:  fetch("name"),
-			Command: fetch("exec"),
-			Program: fetch("program"),
-		})
-	}
-
-	return []BindingEntry{{
-		Trigger:  trigger,
-		Binding:  binding,
-		Sequence: "", // optional: fetch(edn.Keyword("sequence"))
-		Actions:  actions,
-	}}
-}
-
 // emitTable prints all rows as a Markdown table, sorted by --sort
 func emitTable(entries []BindingEntry) {
 	if len(entries) == 0 {
@@ -152,25 +131,20 @@ func emitTable(entries []BindingEntry) {
 		return
 	}
 
-	// Optional: sort by flags.sortBy
-	// You can implement sorting later if needed
-
 	fmt.Println("===================================================================================")
 	fmt.Println("| Program      | Action                         | Trigger         | Binding        |")
 	fmt.Println("|--------------|--------------------------------|------------------|----------------|")
 
 	for _, e := range entries {
 		for _, a := range e.Actions {
-			bind := e.Sequence
-			if bind == "" {
-				bind = e.Binding.Key
-			}
+			trigger := formatTrigger(e.Trigger, a.Program)
+			binding := formatBinding(e, a.Program)
 			fmt.Printf(
 				"| %-12s | %-30s | %-16s | %-14s |\n",
 				a.Program,
 				a.Action,
-				e.Trigger.Modifier+"-"+e.Trigger.Key,
-				e.Binding.Modifier+"-"+bind,
+				trigger,
+				binding,
 			)
 		}
 	}
