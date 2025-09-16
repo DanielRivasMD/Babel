@@ -21,22 +21,14 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: load values on config
-var bindingLookups = buildLookupFuncs(loadBindingFormat("binding.toml"))
-var triggerLookups = buildLookupFuncs(loadTriggerFormat("trigger.toml"))
+var bindingLookups = buildLookupFuncs(loadFormat("binding.toml"))
+var triggerLookups = buildLookupFuncs(loadFormat("trigger.toml"))
+var configLookups = buildLookupFuncs(loadFormat("config.toml"))
 
-func normalizeProgram(p string) string {
-	switch p {
-	case "helix-common", "helix-insert", "helix-normal", "helix-select":
-		return "helix"
-	default:
-		return p
-	}
-}
-
-func formatTrigger(k KeySeq, program string) string {
-	lookup := triggerLookups[normalizeProgram(program)]
+func formatKeySeq(k KeySeq, lookups map[string]TriggerLookup, program string) string {
+	lookup := lookups[normalizeProgram(program)]
 	if lookup == nil {
-		lookup = triggerLookups["default"]
+		lookup = lookups["default"]
 	}
 
 	var modParts []string
@@ -58,10 +50,10 @@ func formatTrigger(k KeySeq, program string) string {
 	return out
 }
 
-func formatBinding(b BindingEntry, program string) string {
-	lookup := bindingLookups[normalizeProgram(program)]
+func formatBindingEntry(b BindingEntry, lookups map[string]TriggerLookup, program string) string {
+	lookup := lookups[normalizeProgram(program)]
 	if lookup == nil {
-		lookup = bindingLookups["default"]
+		lookup = lookups["default"]
 	}
 
 	key := b.Sequence
@@ -84,27 +76,10 @@ func formatBinding(b BindingEntry, program string) string {
 	return out
 }
 
-type Formatter struct {
-	Trigger func(KeySeq, string) string
-	Binding func(BindingEntry, string) string
-}
-
-type BindingFormatConfig map[string]map[string]string
-
-func loadBindingFormat(path string) BindingFormatConfig {
-	var cfg BindingFormatConfig
+func loadFormat(path string) map[string]map[string]string {
+	var cfg map[string]map[string]string
 	if _, err := toml.DecodeFile(path, &cfg); err != nil {
-		log.Fatalf("failed to load binding format config: %v", err)
-	}
-	return cfg
-}
-
-type TriggerFormatConfig map[string]map[string]string
-
-func loadTriggerFormat(path string) TriggerFormatConfig {
-	var cfg TriggerFormatConfig
-	if _, err := toml.DecodeFile(path, &cfg); err != nil {
-		log.Fatalf("failed to load trigger format config: %v", err)
+		log.Fatalf("failed to load format config from %s: %v", path, err)
 	}
 	return cfg
 }
@@ -139,6 +114,15 @@ func buildLookupFuncs(cfg map[string]map[string]string) map[string]TriggerLookup
 	}
 
 	return out
+}
+
+func normalizeProgram(p string) string {
+	switch p {
+	case "helix-common", "helix-insert", "helix-normal", "helix-select":
+		return "helix"
+	default:
+		return p
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
