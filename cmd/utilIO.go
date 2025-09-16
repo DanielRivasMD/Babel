@@ -44,7 +44,17 @@ func formatTrigger(k KeySeq, program string) string {
 	}
 	mod := strings.Join(modParts, "-")
 
-	return k.Mode + " " + mod + "-" + lookup(k.Key)
+	var out string
+	if mod != "" {
+		out = mod + "-" + lookup(k.Key)
+	} else {
+		out = lookup(k.Key)
+	}
+
+	if k.Mode != "" {
+		return k.Mode + "=" + out
+	}
+	return out
 }
 
 func formatBinding(b BindingEntry, program string) string {
@@ -66,7 +76,13 @@ func formatBinding(b BindingEntry, program string) string {
 	}
 	mod := strings.Join(modParts, "-")
 
-	return mod + "-" + lookup(key)
+	var out string
+	if mod != "" {
+		out = mod + "-" + lookup(key)
+	} else {
+		out = lookup(key)
+	}
+	return out
 }
 
 type Formatter struct {
