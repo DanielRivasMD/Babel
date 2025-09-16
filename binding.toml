@@ -1,0 +1,61 @@
+[default]
+page_up = "PgUp"
+page_down = "PgDw"
+up_arrow = "Up"
+down_arrow = "↓"
+left_arrow = "←"
+right_arrow = "→"
+
+left_shift = "<S>"
+left_control = "<T>"
+left_option = "<O>"
+left_command = "<C>"
+
+right_shift = "<R>"
+right_control = "<W>"
+right_option = "<E>"
+right_command = "<Q>"
+
+tab = "TAB"
+delete_or_backspace = "DEL"
+return_or_enter = "RET"
+caps_lock = "<P>"
+spacebar = "<_>"
+
+hyphen = "-"
+equal_sign = "="
+open_bracket = "["
+close_bracket = "]"
+semicolon = ";"
+quote = "'"
+backslash = "\\"
+comma = ","
+period = "."
+slash = "/"
+
+non_us_pound = "•"
+
+# You can add more programs here
+# [broot]
+# O = "Meta"
+# T = "Control"
+
+
+[micro]
+page_up = "PgUp"
+page_down = "PgDn"
+O = "Alt"
+E = "Alt"
+T = "Ctrl"
+W = "Ctrl"
+S = "Shift"
+R = "Shift"
+
+[helix]
+O = "A"
+E = "A"
+T = "C"
+W = "C"
+S = "S"
+R = "S"
+
