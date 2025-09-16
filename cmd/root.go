@@ -56,45 +56,45 @@ var rg = map[string]*regexp.Regexp{
 	"ch": regexp.MustCompile(`^([OESRTWCQ]+)([a-z])$`),
 }
 
-// replace arrows & modifiers
-var triggerFormat = strings.NewReplacer(
-	"page_up", "pgup",
-	"page_down", "pgdw",
+// // replace arrows & modifiers
+// var triggerFormat = strings.NewReplacer(
+// 	"page_up", "pgup",
+// 	"page_down", "pgdw",
 
-	"up_arrow", "↑",
-	"down_arrow", "↓",
-	"right_arrow", "→",
-	"left_arrow", "←",
+// 	"up_arrow", "↑",
+// 	"down_arrow", "↓",
+// 	"right_arrow", "→",
+// 	"left_arrow", "←",
 
-	"left_shift", "<S>",
-	"left_control", "<T>",
-	"left_option", "<O>",
-	"left_command", "<C>",
+// 	"left_shift", "<S>",
+// 	"left_control", "<T>",
+// 	"left_option", "<O>",
+// 	"left_command", "<C>",
 
-	"right_shift", "<R>",
-	"right_control", "<W>",
-	"right_option", "<E>",
-	"right_command", "<Q>",
+// 	"right_shift", "<R>",
+// 	"right_control", "<W>",
+// 	"right_option", "<E>",
+// 	"right_command", "<Q>",
 
-	"tab", "TAB",
-	"delete_or_backspace", "DEL",
-	"return_or_enter", "RET",
-	"caps_lock", "<P>",
-	"spacebar", "<_>",
+// 	"tab", "TAB",
+// 	"delete_or_backspace", "DEL",
+// 	"return_or_enter", "RET",
+// 	"caps_lock", "<P>",
+// 	"spacebar", "<_>",
 
-	"hyphen", "-",
-	"equal_sign", "=",
-	"open_bracket", "[",
-	"close_bracket", "]",
-	"semicolon", ";",
-	"quote", "'",
-	"backslash", "\\",
-	"comma", ",",
-	"period", ".",
-	"slash", "/",
+// 	"hyphen", "-",
+// 	"equal_sign", "=",
+// 	"open_bracket", "[",
+// 	"close_bracket", "]",
+// 	"semicolon", ";",
+// 	"quote", "'",
+// 	"backslash", "\\",
+// 	"comma", ",",
+// 	"period", ".",
+// 	"slash", "/",
 
-	"non_us_pound", "•",
-)
+// 	"non_us_pound", "•",
+// )
 
 var (
 	dirs  configDirs
@@ -127,6 +127,7 @@ func init() {
 		horus.WithMessage("registering config completion for flag program"),
 	)
 
+	cobra.OnInitialize(initConfigDirs)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,20 +145,43 @@ func onelineErr(er string) string {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: add config for binding interpret & display
-type Row struct {
-	action  string
-	command string
-	program string
-
-	rawTrigger    string
-	formatTrigger string
-	rawBinding    string
-	formatBinding string
-	sequence      string
+type KeySeq struct {
+	Mode     string
+	Modifier string
+	Key      string
 }
 
-func (r Row) Print() string {
-	return fmt.Sprintf("action: %s\ncommand: %s\nprogram: %s\ntrigger: %s - %s\nbinding: %s - %s", r.action, r.command, r.program, r.rawTrigger, r.formatTrigger, r.rawBinding, r.formatTrigger)
+func (s KeySeq) Render() string {
+	return fmt.Sprintf("mode:%s - modifier:%s - key:%s", s.Mode, s.Modifier, s.Key)
+}
+
+type ProgramAction struct {
+	Program string
+	Action  string
+	Command string
+}
+
+func (a ProgramAction) Render() string {
+	return fmt.Sprintf("Program: %s | Action: %s | Command: %s", a.Program, a.Action, a.Command)
+}
+
+type BindingEntry struct {
+	Trigger  KeySeq
+	Binding  KeySeq
+	Sequence string
+	Actions  []ProgramAction
+}
+
+func (b BindingEntry) Render() string {
+	var actions []string
+	for _, a := range b.Actions {
+		actions = append(actions, a.Render())
+	}
+	return fmt.Sprintf(
+		"Trigger: [%s] | Binding: [%s] | Sequence: %s\n  Actions:\n    %s",
+		b.Trigger.Render(), b.Binding.Render(), b.Sequence,
+		strings.Join(actions, "\n    "),
+	)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,112 +196,151 @@ func completePrograms(cmd *cobra.Command, args []string, toComplete string) ([]s
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func parseEDNFile(path string) ([]Row, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %s: %w", path, err)
+func parseBinding(rawMeta map[edn.Keyword]any, vec []any, mode string) *BindingEntry {
+	if len(vec) < 2 {
+		return nil // malformed rule vector
 	}
-	text := string(data)
-	mode := extractMode(text)
-	rows := parseBindings(text, mode)
-	return rows, nil
+
+	// Parse trigger
+	rawTrigger := string(vec[0].(edn.Keyword))
+	tm, tk := splitEDNKey(rawTrigger)
+	trigger := KeySeq{Mode: mode, Modifier: tm, Key: tk}
+
+	// Parse binding
+	rawBinding := buildKeySequence(vec[1])
+	bm, bk := splitEDNKey(rawBinding)
+	binding := KeySeq{Mode: "", Modifier: bm, Key: bk}
+
+	// Parse actions
+	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
+	if !ok {
+		return nil
+	}
+
+	var actions []ProgramAction
+	for _, a := range acts {
+		m, ok := a.(map[any]any)
+		if !ok {
+			continue
+		}
+		actions = append(actions, ProgramAction{
+			Program: fmt.Sprint(m[edn.Keyword("program")]),
+			Action:  fmt.Sprint(m[edn.Keyword("name")]),
+			Command: fmt.Sprint(m[edn.Keyword("exec")]),
+		})
+	}
+
+	// Optional sequence
+	seq := ""
+	if v, ok := rawMeta[edn.Keyword("sequence")]; ok {
+		seq = fmt.Sprint(v)
+	}
+
+	return &BindingEntry{
+		Trigger:  trigger,
+		Binding:  binding,
+		Sequence: seq,
+		Actions:  actions,
+	}
 }
 
-// take the raw EDN text + mode letter.
-func parseBindings(text, modeLetter string) []Row {
-	var rows []Row
+func parseBindings(text, mode string) []BindingEntry {
+	var entries []BindingEntry
 	pos := 0
 
 	for {
-		// find the next ^{…}[…] block
 		metaStr, vecStr, nextPos, ok := extractEntry(text, pos)
 		if !ok {
 			break
 		}
 		pos = nextPos
 
-		// decode metadata
 		rawMeta, err := decodeMetadata(metaStr)
 		if err != nil {
 			log.Fatalf("EDN metadata unmarshal error: %v", err)
 		}
 
-		// decode the rule vector
 		vec, err := decodeRule(vecStr)
 		if err != nil {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
 
-		// raw trigger and binding
-		rawTrigger := string(vec[0].(edn.Keyword))
-		rawBinding := buildKeySequence(vec[1])
-
-		// formatted versions
-		fmtTrigger := formatTrigger(vec[0].(edn.Keyword))
-		if modeLetter != "" {
-			fmtTrigger = modeLetter + fmtTrigger
+		if entry := parseBinding(rawMeta, vec, mode); entry != nil {
+			entries = append(entries, *entry)
 		}
-		fmtBinding := formatTrigger(edn.Keyword(rawBinding))
-
-		if strings.Contains(rawTrigger, "arrow") {
-			fmt.Printf("trigger => raw: %s - format: %s\n", rawTrigger, fmtTrigger)
-			fmt.Printf("bind    => raw: %s - format: %s\n", rawBinding, fmtBinding)
-			fmt.Println()
-		}
-
-		// expand each :doc/actions entry into one Row
-		rows = append(rows, collectRows(rawMeta, rawTrigger, fmtTrigger, rawBinding, fmtBinding)...)
 	}
 
-	return rows
+	return entries
 }
 
-// formatTrigger rewrites a Keyword like ":!Tpage_up" → "T page_up"
-func formatTrigger(raw edn.Keyword) string {
-	s := string(raw)
-	s = strings.TrimPrefix(s, ":")
-	s = strings.TrimPrefix(s, "!")
-	parts := strings.SplitN(s, "#P", 2) // group#Pname
-	group := parts[0]
-	name := ""
+func parseEDNFile(path string) ([]BindingEntry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", path, err)
+	}
+	text := string(data)
+	mode := extractMode(text)
+	return parseBindings(text, mode), nil
+}
+
+// stripEDNPrefix trims whitespace and any leading EDN prefix ":!"
+func stripEDNPrefix(raw string) string {
+	s := strings.TrimSpace(raw)
+	return strings.TrimPrefix(s, ":!")
+}
+
+// splitEDNKey rewrites a Keyword like ":!Tpage_up" → "T page_up"
+func splitEDNKey(str string) (string, string) {
+	str = strings.TrimPrefix(str, ":")
+	str = strings.TrimPrefix(str, "!")
+	// if str == "" {
+	// 	return "", ""
+	// }
+	parts := strings.SplitN(str, "#P", 2) // group#Pname
+	modifier := parts[0]
+	key := ""
 	if len(parts) > 1 {
-		name = parts[1]
+		key = parts[1]
 	}
-	return triggerFormat.Replace(fmt.Sprintf("%s %s", group, name))
+	return modifier, key
 }
 
-func gatherRowsFromPaths(paths []string) ([]Row, error) {
-	var allRows []Row
+func gatherRowsFromPaths(paths []string) ([]BindingEntry, error) {
+	var all []BindingEntry
 	for _, path := range paths {
-		rows, err := parseEDNFile(path)
+		entries, err := parseEDNFile(path)
 		if err != nil {
 			return nil, err
 		}
-		allRows = append(allRows, rows...)
+		all = append(all, entries...)
 	}
-	return allRows, nil
+	return all, nil
 }
 
 // TODO: validate flags on prerun
 
 // filterByProgram applies the optional programFilter regex to a slice of Rows.
 // If programFilter is empty, it returns rows unmodified.
-func filterByProgram(rows []Row, programFilter string) []Row {
-	// compile regex if provided
-	var progRE *regexp.Regexp
-	if programFilter != "" {
-		re, err := regexp.Compile(programFilter)
-		if err != nil {
-			log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
-		}
-		progRE = re
+func filterByProgram(entries []BindingEntry, programFilter string) []BindingEntry {
+	if programFilter == "" {
+		return entries
+	}
+	progRE, err := regexp.Compile(programFilter)
+	if err != nil {
+		log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
 	}
 
-	// filter
-	var out []Row
-	for _, r := range rows {
-		if progRE == nil || progRE.MatchString(r.program) {
-			out = append(out, r)
+	var out []BindingEntry
+	for _, e := range entries {
+		var filtered []ProgramAction
+		for _, a := range e.Actions {
+			if progRE.MatchString(a.Program) {
+				filtered = append(filtered, a)
+			}
+		}
+		if len(filtered) > 0 {
+			e.Actions = filtered
+			out = append(out, e)
 		}
 	}
 	return out
