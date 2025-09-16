@@ -20,6 +20,7 @@ import (
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: load values on config
 var bindingLookups = buildLookupFuncs(loadBindingFormat("binding.toml"))
 var triggerLookups = buildLookupFuncs(loadTriggerFormat("trigger.toml"))
 

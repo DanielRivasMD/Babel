@@ -18,7 +18,7 @@ import (
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func parseBinding(rawMeta map[edn.Keyword]any, vec []any, mode string) *BindingEntry {
+func parseBindingEntry(rawMeta map[edn.Keyword]any, vec []any, mode string) *BindingEntry {
 	if len(vec) < 2 {
 		return nil // malformed rule vector
 	}
@@ -65,7 +65,7 @@ func parseBinding(rawMeta map[edn.Keyword]any, vec []any, mode string) *BindingE
 	}
 }
 
-func parseBindings(text, mode string) []BindingEntry {
+func parseBindingEntries(text, mode string) []BindingEntry {
 	var entries []BindingEntry
 	pos := 0
 
@@ -86,7 +86,7 @@ func parseBindings(text, mode string) []BindingEntry {
 			log.Fatalf("EDN rule decode error: %v", err)
 		}
 
-		if entry := parseBinding(rawMeta, vec, mode); entry != nil {
+		if entry := parseBindingEntry(rawMeta, vec, mode); entry != nil {
 			entries = append(entries, *entry)
 		}
 	}
@@ -97,8 +97,22 @@ func parseBindings(text, mode string) []BindingEntry {
 func parseEDNFile(path string) ([]BindingEntry, error) {
 	text := loadEDNFile(path)
 	mode := extractMode(text)
-	return parseBindings(text, mode), nil
+	return parseBindingEntries(text, mode), nil
 }
+
+func parseEDNFiles(paths []string) ([]BindingEntry, error) {
+	var all []BindingEntry
+	for _, path := range paths {
+		entries, err := parseEDNFile(path)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, entries...)
+	}
+	return all, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // stripEDNPrefix trims whitespace and any leading EDN prefix ":!"
 func stripEDNPrefix(str string) string {
@@ -194,19 +208,38 @@ vecLoop:
 	return metaStr, vecStr, vecEnd, true
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func gatherRowsFromPaths(paths []string) ([]BindingEntry, error) {
-	var all []BindingEntry
-	for _, path := range paths {
-		entries, err := parseEDNFile(path)
-		if err != nil {
-			return nil, err
-		}
-		all = append(all, entries...)
+// extractMode finds the first symbol immediately under :rules,
+// e.g. [:q-mode …], trims the leading ':', splits on '-'
+// and returns the first character as a lowercase string
+func extractMode(text string) string {
+	ixSpace := 20 // TODO: random hardcode number
+	// locate the ":rules" clause
+	ruleStart := strings.Index(text, ":rules")
+	if ruleStart < 0 {
+		return ""
 	}
-	return all, nil
+	// find the '[' that starts the rules vector
+	sliceRule := text[ruleStart : ruleStart+ixSpace]
+	brOpen := strings.Index(sliceRule, "[")
+	if brOpen < 0 {
+		return ""
+	}
+	if sliceRule[brOpen+1:brOpen+2] != ":" {
+		return ""
+	} else {
+		sliceMode := sliceRule[brOpen:]
+		startMode := strings.Index(sliceMode, ":")
+		endMode := strings.Index(sliceMode, "-")
+		if startMode < 0 || endMode < 0 {
+			return ""
+		}
+		mode := sliceRule[brOpen:][startMode:endMode]
+		mode = strings.TrimPrefix(mode, ":")
+		return mode
+	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: validate flags on prerun
 

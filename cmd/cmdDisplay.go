@@ -61,7 +61,7 @@ func runDisplay(cmd *cobra.Command, args []string) {
 	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
 
 	// Parse all EDN files into structured bindings
-	allEntries, err := gatherRowsFromPaths(paths)
+	allEntries, err := parseEDNFiles(paths)
 	if err != nil {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
@@ -136,37 +136,6 @@ func emitTable(entries []BindingEntry) {
 	}
 
 	fmt.Println("===================================================================================")
-}
-
-// extractMode finds the first symbol immediately under :rules,
-// e.g. [:q-mode …], trims the leading ':', splits on '-'
-// and returns the first character as a lowercase string
-func extractMode(text string) string {
-	ixSpace := 20 // TODO: random hardcode number
-	// locate the ":rules" clause
-	ruleStart := strings.Index(text, ":rules")
-	if ruleStart < 0 {
-		return ""
-	}
-	// find the '[' that starts the rules vector
-	sliceRule := text[ruleStart : ruleStart+ixSpace]
-	brOpen := strings.Index(sliceRule, "[")
-	if brOpen < 0 {
-		return ""
-	}
-	if sliceRule[brOpen+1:brOpen+2] != ":" {
-		return ""
-	} else {
-		sliceMode := sliceRule[brOpen:]
-		startMode := strings.Index(sliceMode, ":")
-		endMode := strings.Index(sliceMode, "-")
-		if startMode < 0 || endMode < 0 {
-			return ""
-		}
-		mode := sliceRule[brOpen:][startMode:endMode]
-		mode = strings.TrimPrefix(mode, ":")
-		return mode
-	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

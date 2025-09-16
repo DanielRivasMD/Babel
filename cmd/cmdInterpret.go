@@ -48,40 +48,6 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var prefix = map[string]map[rune]string{
-	"micro": {
-		'O': "Alt", 'E': "Alt",
-		'T': "Ctrl", 'W': "Ctrl",
-		'S': "Shift", 'R': "Shift",
-	},
-	"helix": {
-		'O': "A", 'E': "A",
-		'T': "C", 'W': "C",
-		'S': "S", 'R': "S",
-	},
-	// TODO: add more targets here, e.g. "broot", lazygit, serpl: { }
-}
-
-var keyMap = map[string]map[string]string{
-	"micro": {
-		"left_arrow":  "Ctrl",
-		"right_arrow": "Ctrl",
-		"up_arrow":    "Ctrl",
-		"down_arrow":  "Ctrl",
-		"page_up":     "PgUp",
-		"page_down":   "PgDn",
-	},
-	"helix": {
-		"left_arrow":  "left",
-		"right_arrow": "right",
-		"up_arrow":    "up",
-		"down_arrow":  "down",
-		"page_up":     "page-up",
-		"page_down":   "page-down",
-	},
-	// TODO: add more targets like "broot", "lazygit", etc.
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func preInterpret(cmd *cobra.Command, args []string) {
@@ -117,15 +83,15 @@ func runInterpret(cmd *cobra.Command, args []string) {
 	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
 
 	// Parse all EDN files into structured bindings
-	allEntries, err := gatherRowsFromPaths(paths)
+	allEntries, err := parseEDNFiles(paths)
 	if err != nil {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 
-	fmt.Println("ALL ENTRIES")
-	for _, e := range allEntries {
-		fmt.Println(e)
-	}
+	// fmt.Println("ALL ENTRIES")
+	// for _, e := range allEntries {
+	// 	fmt.Println(e)
+	// }
 	// fmt.Println(allEntries)
 
 	// Emit for multiple Helix modes
@@ -143,61 +109,45 @@ func runInterpret(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: refactor as default flag
-// helper to pick the prefixMap for a given target
-func getPrefixMap(target string) map[rune]string {
-	if pm, ok := prefix[target]; ok {
-		return pm
-	}
-	return prefix["helix"]
-}
-
-func getKeyMap(program string) map[string]string {
-	if km, ok := keyMap[program]; ok {
-		return km
-	}
-	return keyMap["helix"] // default fallback
-}
-
 // formatBinds converts raw keys like "OTf1" → "Alt-Ctrl-F1"
 // and strips the surrounding brackets from values "[Copy]" → "Copy".
 func formatBinds(raw map[string]string, program string) map[string]string {
 	out := make(map[string]string, len(raw))
-	pm := getPrefixMap(program)
+	// pm := getPrefixMap(program)
 
 	for k, v := range raw {
 		key := stripEDNPrefix(k)
 		prettyKey := key
 
-		if m := rg["fn"].FindStringSubmatch(key); m != nil {
-			prefixRunes, fnPart := m[1], m[2]
-			var parts []string
-			for _, r := range prefixRunes {
-				if txt, ok := pm[r]; ok {
-					parts = append(parts, txt)
-				}
-			}
-			km := getKeyMap(program)
-			if mapped, ok := km[fnPart]; ok {
-				parts = append(parts, mapped)
-			} else {
-				parts = append(parts, strings.ToUpper(fnPart))
-			}
+		// if m := rg["fn"].FindStringSubmatch(key); m != nil {
+		// 	prefixRunes, fnPart := m[1], m[2]
+		// 	var parts []string
+		// 	for _, r := range prefixRunes {
+		// 		if txt, ok := pm[r]; ok {
+		// 			parts = append(parts, txt)
+		// 		}
+		// 	}
+		// 	km := getKeyMap(program)
+		// 	if mapped, ok := km[fnPart]; ok {
+		// 		parts = append(parts, mapped)
+		// 	} else {
+		// 		parts = append(parts, strings.ToUpper(fnPart))
+		// 	}
 
-			// parts = append(parts, strings.ToUpper(fnPart))
-			prettyKey = strings.Join(parts, "-")
+		// 	// parts = append(parts, strings.ToUpper(fnPart))
+		// 	prettyKey = strings.Join(parts, "-")
 
-		} else if m := rg["ch"].FindStringSubmatch(key); m != nil {
-			prefixRunes, charPart := m[1], m[2]
-			var parts []string
-			for _, r := range prefixRunes {
-				if txt, ok := pm[r]; ok {
-					parts = append(parts, txt)
-				}
-			}
-			parts = append(parts, charPart)
-			prettyKey = strings.Join(parts, "-")
-		}
+		// } else if m := rg["ch"].FindStringSubmatch(key); m != nil {
+		// 	prefixRunes, charPart := m[1], m[2]
+		// 	var parts []string
+		// 	for _, r := range prefixRunes {
+		// 		if txt, ok := pm[r]; ok {
+		// 			parts = append(parts, txt)
+		// 		}
+		// 	}
+		// 	parts = append(parts, charPart)
+		// 	prettyKey = strings.Join(parts, "-")
+		// }
 
 		var prettyVal string
 		switch program {
@@ -257,7 +207,7 @@ func emitBindings(cmd *cobra.Command, entries []BindingEntry, target string) {
 		}
 	}
 
-	fmt.Println(rawBind)
+	// fmt.Println(rawBind)
 
 	// Format bindings for output
 	formatted := formatBinds(rawBind, target)
