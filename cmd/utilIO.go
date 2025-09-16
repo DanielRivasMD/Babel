@@ -12,10 +12,54 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/DanielRivasMD/horus"
 	"github.com/ttacon/chalk"
 	"olympos.io/encoding/edn"
 )
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func formatBinding(b BindingEntry, program string) string {
+	r := triggerReplacers[program]
+	if r == nil {
+		r = triggerReplacers["default"]
+	}
+	key := b.Sequence
+	if key == "" {
+		key = b.Binding.Key
+	}
+	mod := r.Replace(b.Binding.Modifier)
+	key = r.Replace(key)
+	return mod + "-" + key
+}
+
+type Formatter struct {
+	Trigger func(KeySeq, string) string
+	Binding func(BindingEntry, string) string
+}
+
+type TriggerFormatConfig map[string]map[string]string
+
+func loadTriggerFormat(path string) TriggerFormatConfig {
+	var cfg TriggerFormatConfig
+	if _, err := toml.DecodeFile(path, &cfg); err != nil {
+		log.Fatalf("failed to load trigger format config: %v", err)
+	}
+	return cfg
+}
+
+func buildReplacers(cfg TriggerFormatConfig) map[string]*strings.Replacer {
+	out := make(map[string]*strings.Replacer)
+	for program, mapping := range cfg {
+		var pairs []string
+		for k, v := range mapping {
+			pairs = append(pairs, k, v)
+		}
+		out[program] = strings.NewReplacer(pairs...)
+	}
+	return out
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
