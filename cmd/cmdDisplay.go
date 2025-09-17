@@ -117,16 +117,16 @@ func emitTable(entries []BindingEntry) {
 		return
 	}
 
-	fmt.Println("===================================================================================")
-	fmt.Println("| Program      | Action                         | Trigger         | Binding        |")
-	fmt.Println("|--------------|--------------------------------|------------------|----------------|")
+	fmt.Println("===============================================================================================")
+	fmt.Println("| Program      | Action                         | Trigger              | Binding              |")
+	fmt.Println("|--------------|--------------------------------|----------------------|----------------------|")
 
 	for _, entry := range entries {
 		for _, action := range entry.Actions {
 			trigger := formatKeySeq(entry.Trigger, triggerLookups, action.Program)
 			binding := formatBindingEntry(entry, bindingLookups, action.Program)
 			fmt.Printf(
-				"| %-12s | %-30s | %-16s | %-14s |\n",
+				"| %-12s | %-30s | %-20s | %-20s |\n",
 				action.Program,
 				action.Action,
 				trigger,
@@ -135,7 +135,7 @@ func emitTable(entries []BindingEntry) {
 		}
 	}
 
-	fmt.Println("===================================================================================")
+	fmt.Println("===============================================================================================")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
