@@ -1,26 +1,44 @@
 [default]
+T = "T"
+W = "W"
+O = "O"
+E = "E"
+C = "C"
+Q = "Q"
+S = "S"
+R = "R"
+
+
 page_up = "PgUp"
 page_down = "PgDw"
+home = "Home"
+end = "End"
+
+
 up_arrow = "↑"
 down_arrow = "↓"
 left_arrow = "←"
 right_arrow = "→"
+
 
 left_shift = "<S>"
 left_control = "<T>"
 left_option = "<O>"
 left_command = "<C>"
 
+
 right_shift = "<R>"
 right_control = "<W>"
 right_option = "<E>"
 right_command = "<Q>"
+
 
 tab = "TAB"
 delete_or_backspace = "DEL"
 return_or_enter = "RET"
 caps_lock = "<P>"
 spacebar = "<_>"
+
 
 hyphen = "-"
 equal_sign = "="
@@ -42,17 +60,6 @@ non_us_pound = "•"
 
 
 [micro]
-O = "Alt"
-E = "Alt"
-T = "Ctrl"
-W = "Ctrl"
-S = "Shift"
-R = "Shift"
+
 
 [helix]
-O = "A"
-E = "A"
-T = "C"
-W = "C"
-S = "S"
-R = "S"
