@@ -42,8 +42,6 @@ non_us_pound = "•"
 
 
 [micro]
-page_up = "PgUp"
-page_down = "PgDn"
 O = "Alt"
 E = "Alt"
 T = "Ctrl"
