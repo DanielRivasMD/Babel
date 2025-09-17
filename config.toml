@@ -1,6 +1,15 @@
 [micro]
+home = "Home"
+end = "End"
 page_up = "PageUp"
 page_down = "PageDown"
+
+up_arrow = "Up"
+down_arrow = "Down"
+left_arrow = "Left"
+right_arrow = "Right"
+
+
 O = "Alt"
 E = "Alt"
 T = "Ctrl"
