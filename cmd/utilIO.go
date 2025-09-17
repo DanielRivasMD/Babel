@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
 	"github.com/ttacon/chalk"
 	"olympos.io/encoding/edn"
@@ -22,10 +23,6 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: load values on config
-var bindingLookups = buildLookupFuncs(loadFormat("binding.toml"))
-var triggerLookups = buildLookupFuncs(loadFormat("trigger.toml"))
-var configLookups = buildLookupFuncs(loadFormat("config.toml"))
-
 func formatKeySeq(k KeySeq, lookups map[string]KeyLookup, program string) string {
 	lookup := lookups[normalizeProgram(program)]
 	if lookup == nil {
@@ -146,10 +143,8 @@ func normalizeFunctionKey(key string) string {
 
 // TODO: update default root dir definition
 func defaultRootDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "" // will be caught later
-	}
+	home, err := domovoi.FindHome(false)
+	horus.CheckErr(err, horus.WithCategory("init_error"), horus.WithMessage("getting home directory"))
 	return filepath.Join(home, ".saiyajin", "frag")
 }
 

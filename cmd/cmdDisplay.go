@@ -123,8 +123,8 @@ func emitTable(entries []BindingEntry) {
 
 	for _, entry := range entries {
 		for _, action := range entry.Actions {
-			trigger := formatKeySeq(entry.Trigger, triggerLookups, action.Program)
-			binding := formatBindingEntry(entry, bindingLookups, action.Program)
+			trigger := formatKeySeq(entry.Trigger, lookups.trigger, action.Program)
+			binding := formatBindingEntry(entry, lookups.binding, action.Program)
 			fmt.Printf(
 				"| %-12s | %-30s | %-20s | %-20s |\n",
 				action.Program,

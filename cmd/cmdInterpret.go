@@ -101,7 +101,7 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	for _, entry := range filtered {
 		for _, act := range entry.Actions {
 			// Format using configLookups
-			bindKey := formatKeySeq(entry.Binding, configLookups, act.Program)
+			bindKey := formatKeySeq(entry.Binding, lookups.config, act.Program)
 			rawBind[bindKey] = act.Command
 		}
 	}

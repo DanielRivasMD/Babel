@@ -20,6 +20,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -54,12 +55,15 @@ var rg = map[string]*regexp.Regexp{
 }
 
 var (
-	dirs  configDirs
-	flags babelFlags
+	dirs    configDirs
+	flags   babelFlags
+	lookups lookUps
 )
 
 type configDirs struct {
-	home string
+	home     string
+	babel    string
+	config   string
 }
 
 type babelFlags struct {
@@ -70,6 +74,12 @@ type babelFlags struct {
 	ednFile    string
 	renderMode string
 	sortBy     string
+}
+
+type lookUps struct {
+	binding map[string]KeyLookup
+	trigger map[string]KeyLookup
+	config  map[string]KeyLookup
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,6 +104,12 @@ func initConfigDirs() {
 	var err error
 	dirs.home, err = domovoi.FindHome(flags.verbose)
 	horus.CheckErr(err, horus.WithCategory("init_error"), horus.WithMessage("getting home directory"))
+	dirs.babel = filepath.Join(dirs.home, ".babel")
+	dirs.config = filepath.Join(dirs.babel, "config")
+
+	lookups.binding = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_binding.toml")))
+	lookups.trigger = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_trigger.toml")))
+	lookups.config = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "interpret.toml")))
 }
 
 func onelineErr(er string) string {
