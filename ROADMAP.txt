@@ -1,4 +1,7 @@
 - mvp => micro config
+- micro patches:
+  - "MouseRight": "MouseMultiCursor"
+  - "AltEnter": "Autocomplete",
 
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
@@ -22,11 +25,11 @@ cmd/cmdInterpret.go
   line 70     TODO   upgrade flag checking
   line 81     TODO   use normalize program?
 cmd/root.go
-  line 105    TODO   add config for binding interpret & display
+  line 121    TODO   add config for binding interpret & display
 cmd/utilIO.go
-  line 23     TODO   load values on config
-  line 130    TODO   update default root dir definition
-  line 139    TODO   update error habdling
+  line 25     TODO   load values on config
+  line 144    TODO   update default root dir definition
+  line 151    TODO   update error habdling
 cmd/utilParse.go
   line 244    TODO   validate flags on prerun
   line 278    TODO   reuse parse functions to render keyboard
