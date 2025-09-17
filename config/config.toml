@@ -4,6 +4,7 @@ end = "End"
 page_up = "PageUp"
 page_down = "PageDown"
 
+
 up_arrow = "Up"
 down_arrow = "Down"
 left_arrow = "Left"
@@ -16,3 +17,6 @@ T = "Ctrl"
 W = "Ctrl"
 S = "Shift"
 R = "Shift"
+
+
+spacebar = "Space"
