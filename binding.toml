@@ -6,8 +6,8 @@ W = "Ctrl"
 S = "Shift"
 R = "Shift"
 
-page_up = "PgUp"
-page_down = "PgDw"
+page_up = "PageUp"
+page_down = "PageDown"
 home = "Home"
 end = "End"
 
