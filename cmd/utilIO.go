@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -25,7 +26,7 @@ var bindingLookups = buildLookupFuncs(loadFormat("binding.toml"))
 var triggerLookups = buildLookupFuncs(loadFormat("trigger.toml"))
 var configLookups = buildLookupFuncs(loadFormat("config.toml"))
 
-func formatKeySeq(k KeySeq, lookups map[string]TriggerLookup, program string) string {
+func formatKeySeq(k KeySeq, lookups map[string]KeyLookup, program string) string {
 	lookup := lookups[normalizeProgram(program)]
 	if lookup == nil {
 		lookup = lookups["default"]
@@ -37,20 +38,24 @@ func formatKeySeq(k KeySeq, lookups map[string]TriggerLookup, program string) st
 	}
 	mod := strings.Join(modParts, "-")
 
+	// Capitalize function keys like f1 → F1
+	key := normalizeFunctionKey(k.Key)
+	mapped := lookup(key)
+
 	var out string
 	if mod != "" {
-		out = mod + "-" + lookup(k.Key)
+		out = mod + "-" + mapped
 	} else {
-		out = lookup(k.Key)
+		out = mapped
 	}
 
 	if k.Mode != "" {
-		return k.Mode + "=" + out
+		return "(" + k.Mode + ")" + " " + out
 	}
 	return out
 }
 
-func formatBindingEntry(b BindingEntry, lookups map[string]TriggerLookup, program string) string {
+func formatBindingEntry(b BindingEntry, lookups map[string]KeyLookup, program string) string {
 	lookup := lookups[normalizeProgram(program)]
 	if lookup == nil {
 		lookup = lookups["default"]
@@ -60,6 +65,9 @@ func formatBindingEntry(b BindingEntry, lookups map[string]TriggerLookup, progra
 	if key == "" {
 		key = b.Binding.Key
 	}
+
+	// Capitalize function keys like f1 → F1
+	key = normalizeFunctionKey(key)
 
 	var modParts []string
 	for _, r := range b.Binding.Modifier {
@@ -84,16 +92,16 @@ func loadFormat(path string) map[string]map[string]string {
 	return cfg
 }
 
-type TriggerLookup func(string) string
+type KeyLookup func(string) string
 
-func buildLookupFuncs(cfg map[string]map[string]string) map[string]TriggerLookup {
+func buildLookupFuncs(cfg map[string]map[string]string) map[string]KeyLookup {
 	defaultMap := cfg["default"]
-	out := make(map[string]TriggerLookup)
+	out := make(map[string]KeyLookup)
 
 	for program, mapping := range cfg {
 		local := mapping // capture per iteration
 
-		out[program] = func(local map[string]string) TriggerLookup {
+		out[program] = func(local map[string]string) KeyLookup {
 			return func(key string) string {
 				if val, ok := local[key]; ok {
 					return val
@@ -123,6 +131,15 @@ func normalizeProgram(p string) string {
 	default:
 		return p
 	}
+}
+
+func normalizeFunctionKey(key string) string {
+	if strings.HasPrefix(strings.ToLower(key), "f") && len(key) > 1 {
+		if _, err := strconv.Atoi(key[1:]); err == nil {
+			return "F" + key[1:]
+		}
+	}
+	return key
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
