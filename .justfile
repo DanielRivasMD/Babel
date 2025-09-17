@@ -58,7 +58,11 @@ linux app=goapp:
 install app=goapp exe=goexe:
   @echo "\n\033[1;33mInstalling\033[0;37m...\n=================================================="
   go install
+  @echo "\n\033[1;33mLinking\033[0;37m...\n=================================================="
   mv -v "${HOME}/go/bin/{{app}}" "${HOME}/go/bin/{{exe}}"
+  @echo "\n\033[1;33mCopying\033[0;37m...\n=================================================="
+  @if [ ! -d "${HOME}/{{dir}}" ]; then mkdir "${HOME}/{{dir}}"; fi
+  @if test -e "${HOME}/{{config}}"; then rm -r "${HOME}/{{config}}"; fi && echo "\033[1;33mconfig\033[0;37m" && cp -v -R "config" "${HOME}/{{config}}"
 
 ####################################################################################################
 
