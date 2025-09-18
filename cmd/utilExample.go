@@ -5,65 +5,35 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"strings"
-
-	"github.com/ttacon/chalk"
+	"github.com/DanielRivasMD/domovoi"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// formatExample builds a multi‐line example block
-// each usage is a slice of “tokens”: [ command, flagOrArg, flagOrArg, ... ].
-//
-//	app:    your binary name, e.g. "lilith"
-//	usages: one or more usages—each becomes its own line.
-func formatExample(app string, usages ...[]string) string {
-	var b strings.Builder
-
-	for i, usage := range usages {
-		if len(usage) == 0 {
-			continue
-		}
-
-		// first token is the subcommand
-		b.WriteString(
-			chalk.White.Color(app) + " " +
-				chalk.White.Color(chalk.Bold.TextStyle(usage[0])),
-		)
-
-		// remaining tokens are either flags (--foo) or args
-		for _, tok := range usage[1:] {
-			switch {
-			case strings.HasPrefix(tok, "--"):
-				b.WriteString(" " + chalk.Italic.TextStyle(chalk.White.Color(tok)))
-			default:
-				b.WriteString(" " + chalk.Dim.TextStyle(chalk.Italic.TextStyle(tok)))
-			}
-		}
-
-		if i < len(usages)-1 {
-			b.WriteRune('\n')
-		}
-	}
-
-	return b.String()
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var exampleRoot = formatExample(
+var exampleRoot = domovoi.FormatExample(
 	"babel",
 	[]string{"help"},
 )
 
-var exampleDisplay = formatExample(
+var exampleDisplay = domovoi.FormatExample(
 	"babel",
-	[]string{"key", "--file", "~/.saiyajin/frag/simple/lctlcmd.edn"},
+	[]string{"display", "--program", "helix"},
+	[]string{"display", "--file", "~/.saiyajin/frag/simple/lctlcmd.edn"},
 )
 
-var exampleInterpret = formatExample(
-	"",
+var exampleInterpret = domovoi.FormatExample(
+	"babel",
 	[]string{"interpret"},
+)
+
+var exampleConstruct = domovoi.FormatExample(
+	"babel",
+	[]string{"construct"},
+)
+
+var exampleEmbed = domovoi.FormatExample(
+	"babel",
+	[]string{"embed"},
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
