@@ -25,7 +25,19 @@ var helpDisplay = domovoi.FormatHelp(
 var helpInterpret = domovoi.FormatHelp(
 	"Daniel Rivas",
 	"<danielrivasmd@gmail.com>",
-	"",
+	"Load EDN metadata & produce configs",
+)
+
+var helpConstruct = domovoi.FormatHelp(
+	"Daniel Rivas",
+	"<danielrivasmd@gmail.com>",
+	"Install configs & create paths",
+)
+
+var helpEmbed = domovoi.FormatHelp(
+	"Daniel Rivas",
+	"<danielrivasmd@gmail.com>",
+	"Inserting key sequences over templates",
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
