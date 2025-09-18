@@ -1,17 +1,13 @@
-- mvp => micro config
-- micro patches:
-  - "MouseRight": "MouseMultiCursor"
-  - "AltEnter": "Autocomplete",
-
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
-- wire the babel generation with `lilith`
-- or hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
+- hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
 
 - add `babel construct` command to install configs & create paths
-- add logic to search & replace over config templates
+- add `babel embed` command for inserting key sequences over templates => broot, lazygit, etc
+- add logic to search & replace over config templates => as it is present on `mbombo`
 - if only annotated, render in a different color
+- if not a binding, dim color
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - query keyboard shortcut for given action on app => `babel display --action `open file` --program helix
 - or query for shortcut output => `babel display --trigger `ctl-cmd-h` or `babel display --trigger Tf`
@@ -22,8 +18,8 @@ cmd/cmdDisplay.go
   line 57     TODO   update error handlers
   line 58     TODO   simplify run call
 cmd/cmdInterpret.go
-  line 70     TODO   upgrade flag checking
-  line 81     TODO   use normalize program?
+  line 69     TODO   upgrade flag checking
+  line 80     TODO   use normalize program?
 cmd/root.go
   line 121    TODO   add config for binding interpret & display
 cmd/utilIO.go
