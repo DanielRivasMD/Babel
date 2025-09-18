@@ -19,7 +19,6 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -100,28 +99,37 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	rawBind := make(map[string]string)
 	for _, entry := range filtered {
 		for _, act := range entry.Actions {
-			// Format using configLookups
 			bindKey := formatKeySeq(entry.Binding, lookups.config, act.Program)
 			rawBind[bindKey] = act.Command
 		}
 	}
 
 	formatted := formatBinds(rawBind, target)
+	w := cmd.OutOrStdout()
 
 	switch target {
-	case "micro":
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(formatted); err != nil {
-			log.Fatalf("JSON marshal error: %v", err)
-		}
-
 	case "helix-common", "helix-insert", "helix-normal", "helix-select":
-		w := cmd.OutOrStdout()
-		fmt.Fprintf(w, "# mode: %s\n", target)
+		if headerLines, ok := programHeaders[target]; ok {
+			for _, line := range headerLines {
+				fmt.Fprintln(w, line)
+			}
+		}
 		for key, val := range formatted {
 			fmt.Fprintf(w, "%s = %s\n", key, val)
 		}
+
+	case "micro":
+		fmt.Fprintln(w, "{")
+		if headerLines, ok := programHeaders[target]; ok {
+			for _, line := range headerLines {
+				fmt.Fprintln(w, line)
+			}
+		}
+
+		for key, val := range formatted {
+			fmt.Fprintf(w, "  %q: %q,\n", key, val)
+		}
+		fmt.Fprintln(w, "}")
 
 	default:
 		log.Fatalf("unsupported --program %q", target)
@@ -135,10 +143,10 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 	for k, v := range raw {
 		var prettyVal string
 		switch program {
-		case "micro":
-			prettyVal = strings.Trim(v, "[]")
 		case "helix-common", "helix-insert", "helix-normal", "helix-select":
 			prettyVal = tomlList(v)
+		case "micro":
+			prettyVal = strings.Trim(v, "[]")
 		default:
 			prettyVal = v
 		}
@@ -167,6 +175,30 @@ func tomlList(raw string) string {
 		quoted[i] = fmt.Sprintf("%q", p)
 	}
 	return "[" + strings.Join(quoted, ",") + "]"
+}
+
+var programHeaders = map[string][]string{
+	"helix-common": {},
+	"helix-insert": {
+		"[keys.insert]",
+		`A-ret = ["completion"]`,
+		`esc = ["normal_mode"]`},
+	"helix-normal": {
+		"[keys.normal]",
+		`esc = ["collapse_selection", "keep_primary_selection"]`,
+		`ret = ["insert_mode"]`,
+		`A-ret = ["hover"]`},
+	"helix-select": {
+
+		"[keys.select]",
+		`esc = ["normal_mode"]`,
+		`ret = ["insert_mode"]`,
+		`A-ret = ["hover"]`,
+	},
+	"micro": {
+		`"MouseRight": "MouseMultiCursor",`,
+		`"AltEnter": "Autocomplete",`,
+	},
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
