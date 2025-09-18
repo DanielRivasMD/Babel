@@ -177,6 +177,7 @@ func tomlList(raw string) string {
 	return "[" + strings.Join(quoted, ",") + "]"
 }
 
+// TODO: pass as config toml
 var programHeaders = map[string][]string{
 	"helix-common": {},
 	"helix-insert": {

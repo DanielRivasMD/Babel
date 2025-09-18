@@ -3,9 +3,6 @@
 
 - hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
 
-- add `babel construct` command to install configs & create paths
-- add `babel embed` command for inserting key sequences over templates => broot, lazygit, etc
-- add logic to search & replace over config templates => as it is present on `mbombo`
 - if only annotated, render in a different color
 - if not a binding, dim color
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
@@ -20,6 +17,7 @@ cmd/cmdDisplay.go
 cmd/cmdInterpret.go
   line 69     TODO   upgrade flag checking
   line 80     TODO   use normalize program?
+  line 180    TODO   pass as config toml
 cmd/root.go
   line 121    TODO   add config for binding interpret & display
 cmd/utilIO.go
