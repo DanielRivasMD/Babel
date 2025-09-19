@@ -43,6 +43,8 @@ var embedCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(embedCmd)
+
+	embedCmd.Flags().StringVarP(&flags.embedTarget, "target", "", "", "Config file to supplement")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,12 +79,12 @@ func runEmbed(cmd *cobra.Command, args []string) {
 	}
 
 	// Embed for single target
-	embedConfig(cmd, allEntries, flags.program)
+	embedConfig(allEntries, flags.program)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func embedConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
+func embedConfig(entries []BindingEntry, target string) {
 	filtered := filterByProgram(entries, target)
 
 	rawBind := make(map[string]string)
@@ -94,25 +96,24 @@ func embedConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	}
 
 	formatted := formatBinds(rawBind, target)
-	// w := cmd.OutOrStdout()
 
 	switch target {
 	case "broot":
 
 	case "lazygit":
-
+		// collect replacements from edn metadata
 		replaces := []mbomboReplace{}
-
 		for key, val := range formatted {
 			// TODO: relocate trimming to a function
 			clean := strings.Trim(val, "[]")
+			// DOC: all config values in lazygit are tabbed 4 spaces
 			replaces = append(replaces, Replace(clean, fmt.Sprintf("    %s: '<%s>':line", clean, key)))
 		}
 
 		mf := newMbomboConfig(
-			"config.yml",             // outFile
-			[]string{"config.yml"}, // tplFiles
-			replaces...,           // replacements
+			flags.embedTarget,
+			[]string{flags.embedTarget},
+			replaces...,
 		)
 
 		mbomboForging("embed-lazygit", mf)

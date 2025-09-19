@@ -67,13 +67,18 @@ type configDirs struct {
 }
 
 type babelFlags struct {
+	// root
 	verbose bool
 	rootDir string
 	program string
 
+	// display
 	ednFile    string
 	renderMode string
 	sortBy     string
+
+	// embed
+	embedTarget string
 }
 
 type lookUps struct {
