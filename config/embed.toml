@@ -1,0 +1,25 @@
+[broot]
+
+
+[lazygit]
+home = "home"
+end = "end"
+page_up = "pgup"
+page_down = "pgdown"
+
+
+up_arrow = "up"
+down_arrow = "down"
+left_arrow = "left"
+right_arrow = "right"
+
+
+T = "c"
+W = "c"
+S = "s"
+R = "s"
+
+
+spacebar = "space"
+delete_forward = "del"
+delete_or_backspace = "backspace"
