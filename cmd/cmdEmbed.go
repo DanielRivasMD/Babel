@@ -19,6 +19,11 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
+	"fmt"
+	"log"
+	"strings"
+
+	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +35,8 @@ var embedCmd = &cobra.Command{
 	Long:    helpEmbed,
 	Example: exampleEmbed,
 
-	Run: runEmbed,
+	PreRun: preEmbed,
+	Run:    runEmbed,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -41,7 +47,79 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func preEmbed(cmd *cobra.Command, args []string) {
+	horus.CheckEmpty(
+		flags.program,
+		"",
+		horus.WithMessage("`--program` is required"),
+		horus.WithExitCode(2),
+		horus.WithFormatter(func(he *horus.Herror) string { return onelineErr(he.Message) }),
+	)
+	horus.CheckEmpty(
+		flags.rootDir,
+		"",
+		horus.WithMessage("`--root` is required"),
+		horus.WithExitCode(2),
+		horus.WithFormatter(func(he *horus.Herror) string { return onelineErr(he.Message) }),
+	)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func runEmbed(cmd *cobra.Command, args []string) {
+	// Resolve EDN file paths
+	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
+
+	// Parse all EDN files into structured bindings
+	allEntries, err := parseEDNFiles(paths)
+	if err != nil {
+		log.Fatalf("EDN parsing error: %v", err)
+	}
+
+	// Embed for single target
+	embedConfig(cmd, allEntries, flags.program)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func embedConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
+	filtered := filterByProgram(entries, target)
+
+	rawBind := make(map[string]string)
+	for _, entry := range filtered {
+		for _, actions := range entry.Actions {
+			bindKey := formatKeySeq(entry.Binding, lookups.embed, actions.Program)
+			rawBind[bindKey] = actions.Command
+		}
+	}
+
+	formatted := formatBinds(rawBind, target)
+	// w := cmd.OutOrStdout()
+
+	switch target {
+	case "broot":
+
+	case "lazygit":
+
+		replaces := []mbomboReplace{}
+
+		for key, val := range formatted {
+			// TODO: relocate trimming to a function
+			clean := strings.Trim(val, "[]")
+			replaces = append(replaces, Replace(clean, fmt.Sprintf("    %s: '<%s>':line", clean, key)))
+		}
+
+		mf := newMbomboConfig(
+			"config.yml",             // outFile
+			[]string{"config.yml"}, // tplFiles
+			replaces...,           // replacements
+		)
+
+		mbomboForging("embed-lazygit", mf)
+
+	default:
+		log.Fatalf("unsupported --program %q", target)
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
