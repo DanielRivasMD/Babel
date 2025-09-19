@@ -61,9 +61,9 @@ var (
 )
 
 type configDirs struct {
-	home     string
-	babel    string
-	config   string
+	home   string
+	babel  string
+	config string
 }
 
 type babelFlags struct {
@@ -77,9 +77,10 @@ type babelFlags struct {
 }
 
 type lookUps struct {
-	binding map[string]KeyLookup
-	trigger map[string]KeyLookup
-	config  map[string]KeyLookup
+	displayBinding map[string]KeyLookup
+	displayTrigger map[string]KeyLookup
+	interpret      map[string]KeyLookup
+	embed          map[string]KeyLookup
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,9 +108,10 @@ func initConfigDirs() {
 	dirs.babel = filepath.Join(dirs.home, ".babel")
 	dirs.config = filepath.Join(dirs.babel, "config")
 
-	lookups.binding = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_binding.toml")))
-	lookups.trigger = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_trigger.toml")))
-	lookups.config = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "interpret.toml")))
+	lookups.displayBinding = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_binding.toml")))
+	lookups.displayTrigger = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_trigger.toml")))
+	lookups.interpret = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "interpret.toml")))
+	lookups.embed = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "embed.toml")))
 }
 
 func onelineErr(er string) string {

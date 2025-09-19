@@ -98,9 +98,9 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 
 	rawBind := make(map[string]string)
 	for _, entry := range filtered {
-		for _, act := range entry.Actions {
-			bindKey := formatKeySeq(entry.Binding, lookups.config, act.Program)
-			rawBind[bindKey] = act.Command
+		for _, actions := range entry.Actions {
+			bindKey := formatKeySeq(entry.Binding, lookups.interpret, actions.Program)
+			rawBind[bindKey] = actions.Command
 		}
 	}
 
