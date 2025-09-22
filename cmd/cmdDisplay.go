@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/DanielRivasMD/horus"
@@ -58,11 +59,17 @@ func init() {
 		horus.WithOp("display.init"),
 		horus.WithMessage("registering config completion for flag program"),
 	)
+
+	horus.CheckErr(
+		displayCmd.RegisterFlagCompletionFunc("sort", completeSortType),
+		horus.WithOp("display.init"),
+		horus.WithMessage("registering config completion for flag sort"),
+	)
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// BUG: rendering not detecting empty
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
 // TODO: simplify run call
@@ -104,6 +111,14 @@ func runDisplay(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// tableRow is a flattened view of one binding row
+type tableRow struct {
+	Program string
+	Action  string
+	Trigger string
+	Binding string
+}
+
 // buildKeySequence joins the second element of the rule vector into a string
 func buildKeySequence(x any) string {
 	// if x == nil {
@@ -128,21 +143,42 @@ func emitTable(entries []BindingEntry) {
 		return
 	}
 
-	fmt.Println(tableBorder)
-	fmt.Println(tableHeader)
-	fmt.Println(tableDivider)
-
+	// Flatten entries into rows
+	var rows []tableRow
 	for _, entry := range entries {
 		for _, action := range entry.Actions {
 			trigger := formatKeySeq(entry.Trigger, lookups.displayTrigger, action.Program)
 			binding := formatBindingEntry(entry, lookups.displayBinding, action.Program)
-			fmt.Printf(tableRowFmt,
-				action.Program,
-				action.Action,
-				trigger,
-				binding,
-			)
+			rows = append(rows, tableRow{
+				Program: action.Program,
+				Action:  action.Action,
+				Trigger: trigger,
+				Binding: binding,
+			})
 		}
+	}
+
+	// Sort rows based on --sort flag
+	sort.Slice(rows, func(i, j int) bool {
+		switch strings.ToLower(flags.sortBy) {
+		case "program":
+			return rows[i].Program < rows[j].Program
+		case "action":
+			return rows[i].Action < rows[j].Action
+		case "binding":
+			return rows[i].Binding < rows[j].Binding
+		default: // "trigger"
+			return rows[i].Trigger < rows[j].Trigger
+		}
+	})
+
+	// Print table
+	fmt.Println(tableBorder)
+	fmt.Println(tableHeader)
+	fmt.Println(tableDivider)
+
+	for _, r := range rows {
+		fmt.Printf(tableRowFmt, r.Program, r.Action, r.Trigger, r.Binding)
 	}
 
 	fmt.Println(tableBorder)
@@ -172,6 +208,19 @@ func isEmptyEntry(e BindingEntry) bool {
 		}
 	}
 	return true
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func completeSortType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	options := []string{"program", "action", "trigger", "binding"}
+	var completions []string
+	for _, opt := range options {
+		if strings.HasPrefix(opt, toComplete) {
+			completions = append(completions, opt)
+		}
+	}
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
