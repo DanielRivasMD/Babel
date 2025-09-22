@@ -23,6 +23,7 @@ import (
 
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
+	"github.com/ttacon/chalk"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -42,8 +43,20 @@ const (
 	tableBorder  = "==============================================================================================="
 	tableHeader  = "| Program      | Action                         | Trigger              | Binding              |"
 	tableDivider = "|--------------|--------------------------------|----------------------|----------------------|"
-	tableRowFmt  = "| %-12s | %-30s | %-20s | %-20s |\n"
 )
+
+var programColors = map[string]chalk.Color{
+	"micro":        chalk.Cyan,
+	"helix-common": chalk.Cyan,
+	"helix-insert": chalk.Cyan,
+	"helix-normal": chalk.Cyan,
+	"helix-select": chalk.Cyan,
+	"broot":        chalk.Green,
+	"lazygit":      chalk.Green,
+	"terminal":     chalk.Blue,
+	"R":            chalk.Blue,
+	"zellij":       chalk.Yellow,
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -117,6 +130,7 @@ type tableRow struct {
 	Action  string
 	Trigger string
 	Binding string
+	Empty   bool
 }
 
 // buildKeySequence joins the second element of the rule vector into a string
@@ -154,11 +168,12 @@ func emitTable(entries []BindingEntry) {
 				Action:  action.Action,
 				Trigger: trigger,
 				Binding: binding,
+				Empty:   isEmptyEntry(entry),
 			})
 		}
 	}
 
-	// Sort rows based on --sort flag
+	// Sort rows
 	sort.Slice(rows, func(i, j int) bool {
 		switch strings.ToLower(flags.sortBy) {
 		case "program":
@@ -178,13 +193,41 @@ func emitTable(entries []BindingEntry) {
 	fmt.Println(tableDivider)
 
 	for _, r := range rows {
-		fmt.Printf(tableRowFmt, r.Program, r.Action, r.Trigger, r.Binding)
+		// Pick program color
+		var progColor *chalk.Color
+		if c, ok := programColors[r.Program]; ok {
+			progColor = &c
+		}
+
+		// Build row with padded + colored cells
+		row := fmt.Sprintf("| %s | %s | %s | %s |\n",
+			renderCell(r.Program, 12, progColor),
+			renderCell(r.Action, 30, nil),
+			renderCell(r.Trigger, 20, nil),
+			renderCell(r.Binding, 20, nil),
+		)
+
+		// Dim entire row if empty
+		if r.Empty {
+			row = chalk.Dim.TextStyle(row)
+		}
+
+		fmt.Print(row)
 	}
 
 	fmt.Println(tableBorder)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// renderCell pads the raw value to width, then applies color if provided
+func renderCell(val string, width int, color *chalk.Color) string {
+	raw := fmt.Sprintf("%-*s", width, val) // pad first
+	if color != nil {
+		return color.Color(raw)
+	}
+	return raw
+}
 
 func isEmptyEntry(e BindingEntry) bool {
 	if len(e.Actions) == 0 {
