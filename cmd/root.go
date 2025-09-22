@@ -19,10 +19,8 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"fmt"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
@@ -132,18 +130,10 @@ type KeySeq struct {
 	Key      string
 }
 
-func (s KeySeq) Render() string {
-	return fmt.Sprintf("mode:%s - modifier:%s - key:%s", s.Mode, s.Modifier, s.Key)
-}
-
 type ProgramAction struct {
 	Program string
 	Action  string
 	Command string
-}
-
-func (a ProgramAction) Render() string {
-	return fmt.Sprintf("Program: %s | Action: %s | Command: %s", a.Program, a.Action, a.Command)
 }
 
 type BindingEntry struct {
@@ -151,18 +141,6 @@ type BindingEntry struct {
 	Binding  KeySeq
 	Sequence string
 	Actions  []ProgramAction
-}
-
-func (b BindingEntry) Render() string {
-	var actions []string
-	for _, a := range b.Actions {
-		actions = append(actions, a.Render())
-	}
-	return fmt.Sprintf(
-		"Trigger: [%s] | Binding: [%s] | Sequence: %s\n  Actions:\n    %s",
-		b.Trigger.Render(), b.Binding.Render(), b.Sequence,
-		strings.Join(actions, "\n    "),
-	)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
