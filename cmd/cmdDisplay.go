@@ -53,6 +53,7 @@ func init() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// BUG: rendering not detecting empty
 // TODO: add debug flag, or use verbose, telling which file & line we are currently reading
 // TODO: update error handlers
 // TODO: simplify run call
@@ -76,13 +77,14 @@ func runDisplay(cmd *cobra.Command, args []string) {
 		final = filtered
 	case "EMPTY":
 		for _, e := range filtered {
-			if len(e.Actions) == 0 {
+			fmt.Println(e)
+			if isEmptyEntry(e) {
 				final = append(final, e)
 			}
 		}
 	default: // "DEFAULT"
 		for _, e := range filtered {
-			if len(e.Actions) > 0 {
+			if !isEmptyEntry(e) {
 				final = append(final, e)
 			}
 		}
@@ -136,6 +138,32 @@ func emitTable(entries []BindingEntry) {
 	}
 
 	fmt.Println("===============================================================================================")
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func isEmptyEntry(e BindingEntry) bool {
+	if len(e.Actions) == 0 {
+		return true
+	}
+	for _, a := range e.Actions {
+		// Defensive: handle <nil> or empty
+		prog := strings.TrimSpace(fmt.Sprint(a.Program))
+		act := strings.TrimSpace(fmt.Sprint(a.Action))
+		cmd := strings.TrimSpace(fmt.Sprint(a.Command))
+
+		// If any field is meaningful, it's not empty
+		if prog != "" && prog != "<nil>" {
+			return false
+		}
+		if act != "" && act != "<nil>" {
+			return false
+		}
+		if cmd != "" && cmd != "<nil>" {
+			return false
+		}
+	}
+	return true
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
