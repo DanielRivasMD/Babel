@@ -1,25 +1,23 @@
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
+- embed zellij config
 - hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
 
-- if only annotated, render in a different color
-- if not a binding, dim color
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
-- query keyboard shortcut for given action on app => `babel display --action `open file` --program helix
-- or query for shortcut output => `babel display --trigger `ctl-cmd-h` or `babel display --trigger Tf`
 
 ==================================================
 cmd/cmdDisplay.go
-  line 56     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
-  line 57     TODO   update error handlers
-  line 58     TODO   simplify run call
+  line 86     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
+  line 87     TODO   update error handlers
+  line 88     TODO   simplify run call
+cmd/cmdEmbed.go
+  line 107    TODO   relocate trimming to a function
 cmd/cmdInterpret.go
   line 69     TODO   upgrade flag checking
-  line 80     TODO   use normalize program?
-  line 180    TODO   pass as config toml
+  line 179    TODO   pass as config toml
 cmd/root.go
-  line 121    TODO   add config for binding interpret & display
+  line 126    TODO   add config for binding interpret & display
 cmd/utilIO.go
   line 25     TODO   load values on config
   line 144    TODO   update default root dir definition

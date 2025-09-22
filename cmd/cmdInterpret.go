@@ -77,7 +77,6 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 
-	// TODO: use normalize program?
 	// Emit for multiple Helix modes
 	if flags.program == "helix" {
 		for _, sub := range []string{"helix-common", "helix-insert", "helix-normal", "helix-select"} {
