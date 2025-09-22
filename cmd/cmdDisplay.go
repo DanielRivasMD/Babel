@@ -37,6 +37,15 @@ var displayCmd = &cobra.Command{
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const (
+	tableBorder  = "==============================================================================================="
+	tableHeader  = "| Program      | Action                         | Trigger              | Binding              |"
+	tableDivider = "|--------------|--------------------------------|----------------------|----------------------|"
+	tableRowFmt  = "| %-12s | %-30s | %-20s | %-20s |\n"
+)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func init() {
 	rootCmd.AddCommand(displayCmd)
 
@@ -119,16 +128,15 @@ func emitTable(entries []BindingEntry) {
 		return
 	}
 
-	fmt.Println("===============================================================================================")
-	fmt.Println("| Program      | Action                         | Trigger              | Binding              |")
-	fmt.Println("|--------------|--------------------------------|----------------------|----------------------|")
+	fmt.Println(tableBorder)
+	fmt.Println(tableHeader)
+	fmt.Println(tableDivider)
 
 	for _, entry := range entries {
 		for _, action := range entry.Actions {
 			trigger := formatKeySeq(entry.Trigger, lookups.displayTrigger, action.Program)
 			binding := formatBindingEntry(entry, lookups.displayBinding, action.Program)
-			fmt.Printf(
-				"| %-12s | %-30s | %-20s | %-20s |\n",
+			fmt.Printf(tableRowFmt,
 				action.Program,
 				action.Action,
 				trigger,
@@ -137,7 +145,7 @@ func emitTable(entries []BindingEntry) {
 		}
 	}
 
-	fmt.Println("===============================================================================================")
+	fmt.Println(tableBorder)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
