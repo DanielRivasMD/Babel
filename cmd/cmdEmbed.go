@@ -87,40 +87,69 @@ func runEmbed(cmd *cobra.Command, args []string) {
 func embedConfig(entries []BindingEntry, target string) {
 	filtered := filterByProgram(entries, target)
 
-	rawBind := make(map[string]string)
-	for _, entry := range filtered {
-		for _, actions := range entry.Actions {
-			bindKey := formatKeySeq(entry.Binding, lookups.embed, actions.Program)
-			rawBind[bindKey] = actions.Command
-		}
-	}
-
-	formatted := formatBinds(rawBind, target)
-
 	switch target {
 	case "broot":
 
 	case "lazygit":
-		// collect replacements from edn metadata
-		replaces := []mbomboReplace{}
-		for key, val := range formatted {
-			// TODO: relocate trimming to a function
-			clean := strings.Trim(val, "[]")
-			// DOC: all config values in lazygit are tabbed 4 spaces
-			replaces = append(replaces, Replace(clean, fmt.Sprintf("    %s: '<%s>':line", clean, key)))
+		rawBind := make(map[string]string)
+		for _, entry := range filtered {
+			for _, act := range entry.Actions {
+				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, "-")
+				rawBind[bindKey] = act.Command
+			}
 		}
 
-		mf := newMbomboConfig(
-			flags.embedTarget,
-			[]string{flags.embedTarget},
-			replaces...,
-		)
+		formatted := formatBinds(rawBind, target)
+		replaces := []mbomboReplace{}
+		for key, val := range formatted {
+			replaces = append(replaces,
+				replace(val, fmt.Sprintf("    %s: '<%s>':line", val, key)))
+		}
 
+		mf := newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
 		mbomboForging("embed-lazygit", mf)
+
+	case "zellij":
+		replaces := []mbomboReplace{}
+		for _, entry := range filtered {
+			for _, act := range entry.Actions {
+				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, " ")
+				replaces = append(replaces, formatZellijReplace(bindKey, act))
+			}
+		}
+
+		mf := newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
+
+		for _, r := range mf.replaces {
+			fmt.Println(r)
+		}
+		fmt.Println(mf.Cmd())
+
+		mbomboForging("embed-zellij", mf)
 
 	default:
 		log.Fatalf("unsupported --program %q", target)
 	}
+}
+
+func formatZellijReplace(key string, act ProgramAction) mbomboReplace {
+	// Escape the command dynamically
+	escapedCmd := escapeForMbombo(act.Command)
+	escapedCmd = strings.Trim(escapedCmd, "[]")
+
+	// Left-hand side is the command string as it appears in EDN (escaped for mbombo)
+	lhs := escapedCmd
+
+	// Right-hand side is the KDL bind line
+	rhs := fmt.Sprintf("        bind \\\"%s\\\" { %s }:line", key, escapedCmd)
+
+	return replace(fmt.Sprintf("\"%s\"", lhs), rhs)
+}
+
+// escapeForMbombo takes a raw command string (from EDN :exec)
+// and returns a shell-safe string with quotes escaped for mbombo.
+func escapeForMbombo(cmd string) string {
+	return strings.ReplaceAll(cmd, `"`, `\"`)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
