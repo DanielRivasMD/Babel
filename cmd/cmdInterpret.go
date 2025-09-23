@@ -98,7 +98,7 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	rawBind := make(map[string]string)
 	for _, entry := range filtered {
 		for _, actions := range entry.Actions {
-			bindKey := formatKeySeq(entry.Binding, lookups.interpret, actions.Program)
+			bindKey := formatKeySeq(entry.Binding, lookups.interpret, actions.Program, "-")
 			rawBind[bindKey] = actions.Command
 		}
 	}
@@ -135,7 +135,7 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	}
 }
 
-// Format values for TOML output
+// Format values
 func formatBinds(raw map[string]string, program string) map[string]string {
 	out := make(map[string]string, len(raw))
 
@@ -144,7 +144,7 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 		switch program {
 		case "helix-common", "helix-insert", "helix-normal", "helix-select":
 			prettyVal = tomlList(v)
-		case "micro":
+		case "lazygit", "micro", "zellij":
 			prettyVal = strings.Trim(v, "[]")
 		default:
 			prettyVal = v

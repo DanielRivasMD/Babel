@@ -51,7 +51,7 @@ func mbomboForging(op string, mf mbomboForge) {
 	)
 }
 
-func Replace(key, val string) mbomboReplace {
+func replace(key, val string) mbomboReplace {
 	return mbomboReplace{old: key, new: val}
 }
 

@@ -161,7 +161,7 @@ func emitTable(entries []BindingEntry) {
 	var rows []tableRow
 	for _, entry := range entries {
 		for _, action := range entry.Actions {
-			trigger := formatKeySeq(entry.Trigger, lookups.displayTrigger, action.Program)
+			trigger := formatKeySeq(entry.Trigger, lookups.displayTrigger, action.Program, "-")
 			binding := formatBindingEntry(entry, lookups.displayBinding, action.Program)
 			rows = append(rows, tableRow{
 				Program: action.Program,

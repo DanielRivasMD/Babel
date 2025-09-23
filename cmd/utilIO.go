@@ -23,7 +23,7 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: load values on config
-func formatKeySeq(k KeySeq, lookups map[string]KeyLookup, program string) string {
+func formatKeySeq(k KeySeq, lookups map[string]KeyLookup, program, sep string) string {
 	lookup := lookups[normalizeProgram(program)]
 	if lookup == nil {
 		lookup = lookups["default"]
@@ -33,7 +33,7 @@ func formatKeySeq(k KeySeq, lookups map[string]KeyLookup, program string) string
 	for _, r := range k.Modifier {
 		modParts = append(modParts, lookup(string(r)))
 	}
-	mod := strings.Join(modParts, "-")
+	mod := strings.Join(modParts, sep)
 
 	// Capitalize function keys like f1 → F1
 	key := normalizeFunctionKey(k.Key)
@@ -41,7 +41,7 @@ func formatKeySeq(k KeySeq, lookups map[string]KeyLookup, program string) string
 
 	var out string
 	if mod != "" {
-		out = mod + "-" + mapped
+		out = mod + sep + mapped
 	} else {
 		out = mapped
 	}
