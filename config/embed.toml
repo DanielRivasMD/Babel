@@ -23,3 +23,19 @@ R = "s"
 spacebar = "space"
 delete_forward = "del"
 delete_or_backspace = "backspace"
+
+[zellij]
+home = "Home"
+end = "End"
+page_up = "PageUp"
+page_down = "PageDown"
+
+
+O = "Alt"
+E = "Alt"
+T = "Ctrl"
+W = "Ctrl"
+S = "Shift"
+R = "Shift"
+
+
