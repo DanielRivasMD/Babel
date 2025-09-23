@@ -48,7 +48,7 @@ func parseBindingEntry(rawMeta map[edn.Keyword]any, vec []any, mode string) *Bin
 		}
 		actions = append(actions, ProgramAction{
 			Program: fmt.Sprint(m[edn.Keyword("program")]),
-			Action:  fmt.Sprint(m[edn.Keyword("name")]),
+			Action:  fmt.Sprint(m[edn.Keyword("action")]),
 			Command: fmt.Sprint(m[edn.Keyword("exec")]),
 		})
 
