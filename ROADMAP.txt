@@ -1,10 +1,9 @@
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
-- embed zellij config
-- hit all targets at once as default, including `toml` & `yaml` (micro, helix, broot, lazygit, etc)
 
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
+- refactor redundant functions & workflows
 
 ==================================================
 cmd/cmdDisplay.go
@@ -13,6 +12,7 @@ cmd/cmdDisplay.go
   line 88     TODO   simplify run call
 cmd/cmdEmbed.go
   line 107    TODO   relocate trimming to a function
+  line 109    DOC    all config values in lazygit are tabbed 4 spaces
 cmd/cmdInterpret.go
   line 69     TODO   upgrade flag checking
   line 179    TODO   pass as config toml
