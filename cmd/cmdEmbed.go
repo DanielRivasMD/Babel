@@ -120,11 +120,6 @@ func embedConfig(entries []BindingEntry, target string) {
 
 		mf := newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
 
-		for _, r := range mf.replaces {
-			fmt.Println(r)
-		}
-		fmt.Println(mf.Cmd())
-
 		mbomboForging("embed-zellij", mf)
 
 	default:
