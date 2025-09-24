@@ -7,18 +7,15 @@ end = "end"
 page_up = "pgup"
 page_down = "pgdown"
 
-
 up_arrow = "up"
 down_arrow = "down"
 left_arrow = "left"
 right_arrow = "right"
 
-
 T = "c"
 W = "c"
 S = "s"
 R = "s"
-
 
 spacebar = "space"
 delete_forward = "del"
@@ -30,12 +27,9 @@ end = "End"
 page_up = "PageUp"
 page_down = "PageDown"
 
-
 O = "Alt"
 E = "Alt"
 T = "Ctrl"
 W = "Ctrl"
 S = "Shift"
 R = "Shift"
-
-

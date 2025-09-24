@@ -8,37 +8,31 @@ Q = "Q"
 S = "S"
 R = "R"
 
-
 page_up = "PgUp"
 page_down = "PgDw"
 home = "Home"
 end = "End"
-
 
 up_arrow = "↑"
 down_arrow = "↓"
 left_arrow = "←"
 right_arrow = "→"
 
-
 left_shift = "<S>"
 left_control = "<T>"
 left_option = "<O>"
 left_command = "<C>"
-
 
 right_shift = "<R>"
 right_control = "<W>"
 right_option = "<E>"
 right_command = "<Q>"
 
-
 tab = "TAB"
 delete_or_backspace = "DEL"
 return_or_enter = "RET"
 caps_lock = "<P>"
 spacebar = "<_>"
-
 
 hyphen = "-"
 equal_sign = "="
@@ -53,10 +47,7 @@ slash = "/"
 
 non_us_pound = "•"
 
-# You can add more programs here
-# [broot]
-# O = "Meta"
-# T = "Control"
+[broot]
 
 
 [micro]

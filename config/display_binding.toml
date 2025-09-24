@@ -1,13 +1,13 @@
 [default]
-O = "Alt"
-E = "Alt"
-T = "Ctrl"
-W = "Ctrl"
-S = "Shift"
-R = "Shift"
+O = "A"
+E = "A"
+T = "C"
+W = "C"
+S = "S"
+R = "S"
 
-page_up = "PageUp"
-page_down = "PageDown"
+page_up = "PUp"
+page_down = "PDown"
 home = "Home"
 end = "End"
 
@@ -45,10 +45,7 @@ slash = "/"
 
 non_us_pound = "•"
 
-# You can add more programs here
-# [broot]
-# O = "Meta"
-# T = "Control"
+[broot]
 
 
 [micro]
