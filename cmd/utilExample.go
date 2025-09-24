@@ -18,7 +18,7 @@ var exampleRoot = domovoi.FormatExample(
 var exampleDisplay = domovoi.FormatExample(
 	"babel",
 	[]string{"display", "--program", "helix"},
-	[]string{"display", "--file", "~/.saiyajin/frag/simple/lctlcmd.edn"},
+	[]string{"display", "--file", "~/.saiyajin/edn/lctlcmd.edn"},
 )
 
 var exampleInterpret = domovoi.FormatExample(

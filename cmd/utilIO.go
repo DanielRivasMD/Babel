@@ -145,7 +145,7 @@ func normalizeFunctionKey(key string) string {
 func defaultRootDir() string {
 	home, err := domovoi.FindHome(false)
 	horus.CheckErr(err, horus.WithCategory("init_error"), horus.WithMessage("getting home directory"))
-	return filepath.Join(home, ".saiyajin", "frag")
+	return filepath.Join(home, ".saiyajin", "edn")
 }
 
 // TODO: update error habdling
