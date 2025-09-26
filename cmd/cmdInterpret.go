@@ -113,6 +113,7 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 				fmt.Fprintln(w, line)
 			}
 		}
+
 		for key, val := range formatted {
 			fmt.Fprintf(w, "%s = %s\n", key, val)
 		}

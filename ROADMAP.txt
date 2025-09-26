@@ -1,7 +1,6 @@
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
-
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - refactor redundant functions & workflows
 
@@ -10,12 +9,9 @@ cmd/cmdDisplay.go
   line 86     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
   line 87     TODO   update error handlers
   line 88     TODO   simplify run call
-cmd/cmdEmbed.go
-  line 107    TODO   relocate trimming to a function
-  line 109    DOC    all config values in lazygit are tabbed 4 spaces
 cmd/cmdInterpret.go
   line 69     TODO   upgrade flag checking
-  line 179    TODO   pass as config toml
+  line 180    TODO   pass as config toml
 cmd/root.go
   line 126    TODO   add config for binding interpret & display
 cmd/utilIO.go
