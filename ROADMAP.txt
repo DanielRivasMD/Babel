@@ -11,7 +11,9 @@ cmd/cmdDisplay.go
   line 88     TODO   simplify run call
 cmd/cmdInterpret.go
   line 69     TODO   upgrade flag checking
-  line 180    TODO   pass as config toml
+  line 180    TODO   add logic to detect `alone` keys => [:#Pright_control :right_control nil {:alone [:f13]}]
+  line 181    TODO   use rctl as mode normal / insert switch => hardcoded for now
+  line 182    TODO   pass as config toml
 cmd/root.go
   line 126    TODO   add config for binding interpret & display
 cmd/utilIO.go
