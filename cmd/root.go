@@ -137,10 +137,11 @@ type ProgramAction struct {
 }
 
 type BindingEntry struct {
-	Trigger  KeySeq
-	Binding  KeySeq
-	Sequence string
-	Actions  []ProgramAction
+	Trigger     KeySeq
+	Binding     KeySeq
+	Sequence    string
+	Actions     []ProgramAction
+	Annotations map[string][]string // e.g. "alone" -> ["f13"]
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
