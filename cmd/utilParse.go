@@ -23,45 +23,51 @@ func parseBindingEntry(rawMeta map[edn.Keyword]any, vec []any, mode string) *Bin
 		return nil // malformed rule vector
 	}
 
-	// Parse trigger
+	// Trigger
 	rawTrigger := string(vec[0].(edn.Keyword))
 	tm, tk := splitEDNKey(rawTrigger)
 	trigger := KeySeq{Mode: mode, Modifier: tm, Key: tk}
 
-	// Parse binding
+	// Binding
 	rawBinding := buildKeySequence(vec[1])
 	bm, bk := splitEDNKey(rawBinding)
 	binding := KeySeq{Mode: "", Modifier: bm, Key: bk}
 
-	// Parse actions
-	acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any)
-	if !ok {
-		return nil
-	}
-
+	// Actions
 	var actions []ProgramAction
 	var seq string
-	for _, a := range acts {
-		m, ok := a.(map[any]any)
-		if !ok {
-			continue
+	if acts, ok := rawMeta[edn.Keyword("doc/actions")].([]any); ok {
+		for _, a := range acts {
+			m, ok := a.(map[any]any)
+			if !ok {
+				continue
+			}
+			actions = append(actions, ProgramAction{
+				Program: fmt.Sprint(m[edn.Keyword("program")]),
+				Action:  fmt.Sprint(m[edn.Keyword("action")]),
+				Command: fmt.Sprint(m[edn.Keyword("exec")]),
+			})
+			if raw, ok := m[edn.Keyword("sequence")]; ok && raw != nil {
+				seq = fmt.Sprint(raw)
+			}
 		}
-		actions = append(actions, ProgramAction{
-			Program: fmt.Sprint(m[edn.Keyword("program")]),
-			Action:  fmt.Sprint(m[edn.Keyword("action")]),
-			Command: fmt.Sprint(m[edn.Keyword("exec")]),
-		})
+	}
 
-		if raw, ok := m[edn.Keyword("sequence")]; ok && raw != nil {
-			seq = fmt.Sprint(m[edn.Keyword("sequence")])
-		}
+	// Annotations
+	annotations := parseAnnotations(vec)
+
+	// If :alone is present, override binding key
+	if aloneVals, ok := annotations["alone"]; ok && len(aloneVals) > 0 {
+		bm, bk = splitEDNKey(aloneVals[0])
+		binding = KeySeq{Mode: "", Modifier: bm, Key: bk}
 	}
 
 	return &BindingEntry{
-		Trigger:  trigger,
-		Binding:  binding,
-		Sequence: seq,
-		Actions:  actions,
+		Trigger:     trigger,
+		Binding:     binding,
+		Sequence:    seq,
+		Actions:     actions,
+		Annotations: annotations,
 	}
 }
 
