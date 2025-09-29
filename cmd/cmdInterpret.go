@@ -177,25 +177,20 @@ func tomlList(raw string) string {
 	return "[" + strings.Join(quoted, ",") + "]"
 }
 
-// TODO: add logic to detect `alone` keys => [:#Pright_control :right_control nil {:alone [:f13]}]
-// TODO: use rctl as mode normal / insert switch => hardcoded for now
 // TODO: pass as config toml
 var programHeaders = map[string][]string{
 	"helix-common": {},
 	"helix-insert": {
 		"[keys.insert]",
-		`esc = ["collapse_selection", "keep_primary_selection"]`,
 		`A-ret = ["completion"]`,
 	},
 	"helix-normal": {
 		"[keys.normal]",
-		`esc = ["collapse_selection", "keep_primary_selection"]`,
 		`A-ret = ["hover"]`,
 	},
 	"helix-select": {
 
 		"[keys.select]",
-		`esc = ["collapse_selection", "keep_primary_selection"]`,
 		`A-ret = ["hover"]`,
 	},
 	"micro": {
