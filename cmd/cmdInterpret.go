@@ -184,19 +184,22 @@ var programHeaders = map[string][]string{
 	"helix-common": {},
 	"helix-insert": {
 		"[keys.insert]",
+		`esc = ["collapse_selection", "keep_primary_selection"]`,
 		`A-ret = ["completion"]`,
-		`F13 = ["normal_mode"]`},
+		`F13 = ["normal_mode"]`,
+	},
 	"helix-normal": {
 		"[keys.normal]",
 		`esc = ["collapse_selection", "keep_primary_selection"]`,
+		`A-ret = ["hover"]`,
 		`F13 = ["insert_mode"]`,
-		`A-ret = ["hover"]`},
+	},
 	"helix-select": {
 
 		"[keys.select]",
-		`esc = ["normal_mode"]`,
-		`ret = ["insert_mode"]`,
+		`esc = ["collapse_selection", "keep_primary_selection"]`,
 		`A-ret = ["hover"]`,
+		`F13 = ["normal_mode"]`,
 	},
 	"micro": {
 		`"MouseRight": "MouseMultiCursor",`,
