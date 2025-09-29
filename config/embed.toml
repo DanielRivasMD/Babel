@@ -33,3 +33,5 @@ T = "Ctrl"
 W = "Ctrl"
 S = "Shift"
 R = "Shift"
+
+escape = "Esc"
