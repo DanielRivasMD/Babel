@@ -1,8 +1,8 @@
 [default]
-O = "A"
-E = "A"
 T = "C"
 W = "C"
+O = "A"
+E = "A"
 S = "S"
 R = "S"
 
