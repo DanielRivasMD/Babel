@@ -239,6 +239,39 @@ func extractMode(text string) string {
 	}
 }
 
+// parseAnnotations inspects the 4th element of the binding vector (if present)
+// and returns a map of keyword -> []string, e.g. {:alone [:f13]} -> {"alone": {"f13"}}
+func parseAnnotations(vec []any) map[string][]string {
+	anns := make(map[string][]string)
+	if len(vec) < 4 {
+		return anns
+	}
+
+	annMap, ok := vec[3].(map[any]any)
+	if !ok {
+		return anns
+	}
+
+	for k, v := range annMap {
+		kw, ok := k.(edn.Keyword)
+		if !ok {
+			continue
+		}
+		key := string(kw) // e.g. "alone"
+
+		switch vv := v.(type) {
+		case []any:
+			for _, item := range vv {
+				anns[key] = append(anns[key], fmt.Sprint(item))
+			}
+		default:
+			anns[key] = append(anns[key], fmt.Sprint(v))
+		}
+	}
+
+	return anns
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: validate flags on prerun
