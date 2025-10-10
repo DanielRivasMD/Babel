@@ -79,7 +79,22 @@ func runInterpret(cmd *cobra.Command, args []string) {
 
 	// Emit for multiple Helix modes
 	if flags.program == "helix" {
-		for _, sub := range []string{"helix-common", "helix-insert", "helix-normal", "helix-select"} {
+		bases := []string{"helix-common", "helix-insert", "helix-normal", "helix-select"}
+		variants := []string{"", "macosx-", "ubuntu-"}
+
+		for _, v := range variants {
+			for _, b := range bases {
+				sub := strings.Replace(b, "helix-", v+"helix-", 1)
+				emitConfig(cmd, allEntries, sub)
+				fmt.Fprintln(cmd.OutOrStdout())
+			}
+		}
+		return
+	}
+
+	// Emit for multiple Micro variants
+	if flags.program == "micro" {
+		for _, sub := range []string{"micro", "macosx-micro", "ubuntu-micro"} {
 			emitConfig(cmd, allEntries, sub)
 			fmt.Fprintln(cmd.OutOrStdout())
 		}
@@ -106,26 +121,41 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	formatted := formatBinds(rawBind, target)
 	w := cmd.OutOrStdout()
 
-	switch target {
-	case "helix-common", "helix-insert", "helix-normal", "helix-select":
-		if headerLines, ok := programHeaders[target]; ok {
+	// Normalize base name (strip OS prefix for headers and file naming)
+	base := target
+	for _, prefix := range []string{"macosx-", "ubuntu-"} {
+		if strings.HasPrefix(base, prefix) {
+			base = strings.TrimPrefix(base, prefix)
+			break
+		}
+	}
+
+	switch {
+	// Helix variants
+	case strings.HasPrefix(target, "helix-"),
+		strings.HasPrefix(target, "macosx-helix-"),
+		strings.HasPrefix(target, "ubuntu-helix-"):
+
+		if headerLines, ok := programHeaders[base]; ok {
 			for _, line := range headerLines {
 				fmt.Fprintln(w, line)
 			}
 		}
-
 		for key, val := range formatted {
 			fmt.Fprintf(w, "%s = %s\n", key, val)
 		}
 
-	case "micro":
+	// Micro variants
+	case target == "micro",
+		strings.HasPrefix(target, "macosx-micro"),
+		strings.HasPrefix(target, "ubuntu-micro"):
+
 		fmt.Fprintln(w, "{")
-		if headerLines, ok := programHeaders[target]; ok {
+		if headerLines, ok := programHeaders[base]; ok {
 			for _, line := range headerLines {
 				fmt.Fprintln(w, line)
 			}
 		}
-
 		for key, val := range formatted {
 			fmt.Fprintf(w, "  %q: %q,\n", key, val)
 		}
@@ -136,17 +166,27 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Format values
 func formatBinds(raw map[string]string, program string) map[string]string {
 	out := make(map[string]string, len(raw))
 
 	for k, v := range raw {
 		var prettyVal string
-		switch program {
-		case "helix-common", "helix-insert", "helix-normal", "helix-select":
+		switch {
+		case strings.HasPrefix(program, "helix-"),
+			strings.HasPrefix(program, "macosx-helix-"),
+			strings.HasPrefix(program, "ubuntu-helix-"):
 			prettyVal = tomlList(v)
-		case "lazygit", "micro", "zellij":
+
+		case program == "micro",
+			strings.HasPrefix(program, "macosx-micro"),
+			strings.HasPrefix(program, "ubuntu-micro"),
+			program == "lazygit",
+			program == "zellij":
 			prettyVal = strings.Trim(v, "[]")
+
 		default:
 			prettyVal = v
 		}
@@ -154,6 +194,8 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 	}
 	return out
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Convert EDN-style list to TOML array
 func tomlList(raw string) string {
@@ -177,6 +219,8 @@ func tomlList(raw string) string {
 	return "[" + strings.Join(quoted, ",") + "]"
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // TODO: pass as config toml
 var programHeaders = map[string][]string{
 	"helix-common": {},
@@ -189,7 +233,6 @@ var programHeaders = map[string][]string{
 		`A-ret = ["hover"]`,
 	},
 	"helix-select": {
-
 		"[keys.select]",
 		`A-ret = ["hover"]`,
 	},

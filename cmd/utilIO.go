@@ -123,7 +123,9 @@ func buildLookupFuncs(cfg map[string]map[string]string) map[string]KeyLookup {
 
 func normalizeProgram(p string) string {
 	switch p {
-	case "helix-common", "helix-insert", "helix-normal", "helix-select":
+	case "helix-common", "helix-insert", "helix-normal", "helix-select",
+		"macosx-helix-common", "macosx-helix-insert", "macosx-helix-normal", "macosx-helix-select",
+		"ubuntu-helix-common", "ubuntu-helix-insert", "ubuntu-helix-normal", "ubuntu-helix-select":
 		return "helix"
 	default:
 		return p
