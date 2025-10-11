@@ -87,10 +87,10 @@ func runEmbed(cmd *cobra.Command, args []string) {
 func embedConfig(entries []BindingEntry, target string) {
 	filtered := filterByProgram(entries, target)
 
-	switch target {
-	case "broot":
+	switch {
+	case target == "broot":
 
-	case "lazygit":
+	case target == "lazygit":
 		rawBind := make(map[string]string)
 		for _, entry := range filtered {
 			for _, act := range entry.Actions {
@@ -109,18 +109,21 @@ func embedConfig(entries []BindingEntry, target string) {
 		mf := newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
 		mbomboForging("embed-lazygit", mf)
 
-	case "zellij":
+	case strings.HasPrefix(target, "zellij"):
+		normalized := normalizeProgram(target)
+
 		replaces := []mbomboReplace{}
 		for _, entry := range filtered {
 			for _, act := range entry.Actions {
-				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, " ")
+				bindKey := formatKeySeq(entry.Binding, lookups.embed, normalized, " ")
 				replaces = append(replaces, formatZellijReplace(bindKey, act))
 			}
 		}
 
-		mf := newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
-
-		mbomboForging("embed-zellij", mf)
+		mbomboForging(
+			"embed-zellij",
+			newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...),
+		)
 
 	default:
 		log.Fatalf("unsupported --program %q", target)
