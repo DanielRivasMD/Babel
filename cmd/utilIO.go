@@ -122,15 +122,12 @@ func buildLookupFuncs(cfg map[string]map[string]string) map[string]KeyLookup {
 }
 
 func normalizeProgram(p string) string {
-	// Collapse all zellij-* variants to "zellij"
-	if strings.HasPrefix(p, "zellij-") {
+	switch {
+	case strings.Contains(p, "zellij"):
 		return "zellij"
-	}
-
-	switch p {
-	case "helix-common", "helix-insert", "helix-normal", "helix-select",
-		"macosx-helix-common", "macosx-helix-insert", "macosx-helix-normal", "macosx-helix-select",
-		"ubuntu-helix-common", "ubuntu-helix-insert", "ubuntu-helix-normal", "ubuntu-helix-select":
+	case strings.Contains(p, "micro"):
+		return "micro"
+	case strings.Contains(p, "helix"):
 		return "helix"
 	default:
 		return p
