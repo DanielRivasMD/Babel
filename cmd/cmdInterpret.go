@@ -20,7 +20,9 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/DanielRivasMD/horus"
@@ -43,6 +45,8 @@ var interpretCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(interpretCmd)
+
+	interpretCmd.Flags().StringVarP(&flags.interpretTarget, "target", "t", "", "Write output to this file instead of stdout")
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,6 +71,7 @@ func preInterpret(cmd *cobra.Command, args []string) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: upgrade flag checking
+// TODO: declare program target constants & reuse them for tab completions => helix = {helix-common, etc}
 func runInterpret(cmd *cobra.Command, args []string) {
 	// Resolve EDN file paths
 	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
@@ -77,37 +82,40 @@ func runInterpret(cmd *cobra.Command, args []string) {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 
-	// Emit for multiple Helix modes
-	if flags.program == "helix" {
-		bases := []string{"helix-common", "helix-insert", "helix-normal", "helix-select"}
-		variants := []string{"", "macosx-", "ubuntu-"}
+	// Decide output writer
+	var w io.Writer = cmd.OutOrStdout()
+	if flags.interpretTarget != "" {
+		f, err := os.Create(flags.interpretTarget)
+		if err != nil {
+			log.Fatalf("failed to create target file %q: %v", flags.interpretTarget, err)
+		}
+		defer f.Close()
+		w = f
+	}
 
-		for _, v := range variants {
-			for _, b := range bases {
-				sub := strings.Replace(b, "helix-", v+"helix-", 1)
-				emitConfig(cmd, allEntries, sub)
-				fmt.Fprintln(cmd.OutOrStdout())
-			}
+	// Define program families (expand only on exact family names)
+	families := map[string][]string{
+		"helix": {"helix-common", "helix-insert", "helix-normal", "helix-select"},
+		"micro": {"micro"},
+	}
+
+	// respect exact targets
+	if bases, ok := families[flags.program]; ok {
+		for _, b := range bases {
+			emitConfig(w, allEntries, b)
+			fmt.Fprintln(w)
 		}
 		return
 	}
 
-	// Emit for multiple Micro variants
-	if flags.program == "micro" {
-		for _, sub := range []string{"micro", "macosx-micro", "ubuntu-micro"} {
-			emitConfig(cmd, allEntries, sub)
-			fmt.Fprintln(cmd.OutOrStdout())
-		}
-		return
-	}
-
-	// Emit for single target
-	emitConfig(cmd, allEntries, flags.program)
+	// Default: emit once for the exact program provided
+	emitConfig(w, allEntries, flags.program)
+	fmt.Fprintln(w)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
+func emitConfig(w io.Writer, entries []BindingEntry, target string) {
 	filtered := filterByProgram(entries, target)
 
 	rawBind := make(map[string]string)
@@ -119,24 +127,10 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 	}
 
 	formatted := formatBinds(rawBind, target)
-	w := cmd.OutOrStdout()
-
-	// Normalize base name (strip OS prefix for headers and file naming)
-	base := target
-	for _, prefix := range []string{"macosx-", "ubuntu-"} {
-		if strings.HasPrefix(base, prefix) {
-			base = strings.TrimPrefix(base, prefix)
-			break
-		}
-	}
 
 	switch {
-	// Helix variants
-	case strings.HasPrefix(target, "helix-"),
-		strings.HasPrefix(target, "macosx-helix-"),
-		strings.HasPrefix(target, "ubuntu-helix-"):
-
-		if headerLines, ok := programHeaders[base]; ok {
+	case strings.HasPrefix(target, "helix-"):
+		if headerLines, ok := programHeaders[target]; ok {
 			for _, line := range headerLines {
 				fmt.Fprintln(w, line)
 			}
@@ -145,13 +139,9 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 			fmt.Fprintf(w, "%s = %s\n", key, val)
 		}
 
-	// Micro variants
-	case target == "micro",
-		strings.HasPrefix(target, "macosx-micro"),
-		strings.HasPrefix(target, "ubuntu-micro"):
-
+	case target == "micro":
 		fmt.Fprintln(w, "{")
-		if headerLines, ok := programHeaders[base]; ok {
+		if headerLines, ok := programHeaders[target]; ok {
 			for _, line := range headerLines {
 				fmt.Fprintln(w, line)
 			}
@@ -168,21 +158,16 @@ func emitConfig(cmd *cobra.Command, entries []BindingEntry, target string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Format values
 func formatBinds(raw map[string]string, program string) map[string]string {
 	out := make(map[string]string, len(raw))
 
 	for k, v := range raw {
 		var prettyVal string
 		switch {
-		case strings.HasPrefix(program, "helix-"),
-			strings.HasPrefix(program, "macosx-helix-"),
-			strings.HasPrefix(program, "ubuntu-helix-"):
+		case strings.HasPrefix(program, "helix-"):
 			prettyVal = tomlList(v)
 
 		case program == "micro",
-			strings.HasPrefix(program, "macosx-micro"),
-			strings.HasPrefix(program, "ubuntu-micro"),
 			program == "lazygit",
 			program == "zellij":
 			prettyVal = strings.Trim(v, "[]")
