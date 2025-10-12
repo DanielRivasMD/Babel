@@ -77,6 +77,9 @@ type babelFlags struct {
 
 	// embed
 	embedTarget string
+
+	// interpret
+	interpretTarget string
 }
 
 type lookUps struct {
