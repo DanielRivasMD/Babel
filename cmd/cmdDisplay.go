@@ -40,9 +40,9 @@ var displayCmd = &cobra.Command{
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
-	tableBorder  = "==============================================================================================="
-	tableHeader  = "| Program      | Action                         | Trigger              | Binding              |"
-	tableDivider = "|--------------|--------------------------------|----------------------|----------------------|"
+	tableBorder  = "=================================================================================================="
+	tableHeader  = "| Program         | Action                         | Trigger              | Binding              |"
+	tableDivider = "|-----------------|--------------------------------|----------------------|----------------------|"
 )
 
 var programColors = map[string]chalk.Color{
@@ -201,7 +201,7 @@ func emitTable(entries []BindingEntry) {
 
 		// Build row with padded + colored cells
 		row := fmt.Sprintf("| %s | %s | %s | %s |\n",
-			renderCell(r.Program, 12, progColor),
+			renderCell(r.Program, 15, progColor),
 			renderCell(r.Action, 30, nil),
 			renderCell(r.Trigger, 20, nil),
 			renderCell(r.Binding, 20, nil),
