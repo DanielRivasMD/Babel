@@ -70,8 +70,6 @@ func preInterpret(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: upgrade flag checking
-// TODO: declare program target constants & reuse them for tab completions => helix = {helix-common, etc}
 func runInterpret(cmd *cobra.Command, args []string) {
 	// Resolve EDN file paths
 	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
