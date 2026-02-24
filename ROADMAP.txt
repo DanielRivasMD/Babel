@@ -4,6 +4,9 @@
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - refactor redundant functions & workflows
 
+- add configuration for serpl
+
+
 ==================================================
 cmd/cmdDisplay.go
   line 86     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
