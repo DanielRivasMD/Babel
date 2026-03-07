@@ -9,9 +9,9 @@
 
 ==================================================
 cmd/cmdDisplay.go
-  line 86     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
-  line 87     TODO   update error handlers
-  line 88     TODO   simplify run call
+  line 89     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
+  line 90     TODO   update error handlers
+  line 91     TODO   simplify run call
 cmd/cmdInterpret.go
   line 207    TODO   pass as config toml
 cmd/root.go
