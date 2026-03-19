@@ -100,19 +100,19 @@ func embedConfig(entries []BindingEntry, target string) {
 		}
 
 		formatted := formatBinds(rawBind, target)
-		replaces := []mbomboReplace{}
+		replaces := []moldReplace{}
 		for key, val := range formatted {
 			replaces = append(replaces,
 				replace(val, fmt.Sprintf("    %s: '<%s>':line", val, key)))
 		}
 
-		mf := newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
-		mbomboForging("embed-lazygit", mf)
+		mf := newMoldConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
+		moldForging("embed-lazygit", mf)
 
 	case strings.HasPrefix(target, "zellij"):
 		normalized := normalizeProgram(target)
 
-		replaces := []mbomboReplace{}
+		replaces := []moldReplace{}
 		for _, entry := range filtered {
 			for _, act := range entry.Actions {
 				bindKey := formatKeySeq(entry.Binding, lookups.embed, normalized, " ")
@@ -120,9 +120,9 @@ func embedConfig(entries []BindingEntry, target string) {
 			}
 		}
 
-		mbomboForging(
+		moldForging(
 			"embed-zellij",
-			newMbomboConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...),
+			newMoldConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...),
 		)
 
 	default:
@@ -130,9 +130,9 @@ func embedConfig(entries []BindingEntry, target string) {
 	}
 }
 
-func formatZellijReplace(key string, act ProgramAction) mbomboReplace {
+func formatZellijReplace(key string, act ProgramAction) moldReplace {
 	// Escape the command dynamically
-	escapedCmd := escapeForMbombo(act.Command)
+	escapedCmd := escapeForMold(act.Command)
 	escapedCmd = strings.Trim(escapedCmd, "[]")
 
 	// Left-hand side is the command string as it appears in EDN (escaped for mbombo)
@@ -144,9 +144,9 @@ func formatZellijReplace(key string, act ProgramAction) mbomboReplace {
 	return replace(fmt.Sprintf("\"%s\"", lhs), rhs)
 }
 
-// escapeForMbombo takes a raw command string (from EDN :exec)
-// and returns a shell-safe string with quotes escaped for mbombo.
-func escapeForMbombo(cmd string) string {
+// escapeForMold takes a raw command string (from EDN :exec)
+// and returns a shell-safe string with quotes escaped for mbombo
+func escapeForMold(cmd string) string {
 	return strings.ReplaceAll(cmd, `"`, `\"`)
 }
 

@@ -14,48 +14,48 @@ import (
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type mbomboReplace struct {
+type moldReplace struct {
 	old string
 	new string
 }
 
-type mbomboForge struct {
+type moldForge struct {
 	out      string
 	files    []string
-	replaces []mbomboReplace
+	replaces []moldReplace
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func newMbomboConfig(
+func newMoldConfig(
 	outFile string,
 	inFiles []string,
-	replaces ...mbomboReplace,
-) mbomboForge {
-	return mbomboForge{
+	replaces ...moldReplace,
+) moldForge {
+	return moldForge{
 		out:      outFile,
 		files:    inFiles,
 		replaces: replaces,
 	}
 }
 
-func mbomboForging(op string, mf mbomboForge) {
+func moldForging(op string, mf moldForge) {
 	horus.CheckErr(
 		domovoi.ExecSh(mf.Cmd()),
 		horus.WithOp(op),
 		horus.WithCategory("shell_command"),
-		horus.WithMessage("Failed to execute mbombo forge command"),
+		horus.WithMessage("Failed to execute mbombo command"),
 		horus.WithDetails(map[string]any{
 			"command": mf.Cmd(),
 		}),
 	)
 }
 
-func replace(key, val string) mbomboReplace {
-	return mbomboReplace{old: key, new: val}
+func replace(key, val string) moldReplace {
+	return moldReplace{old: key, new: val}
 }
 
-func (m mbomboForge) Cmd() string {
+func (m moldForge) Cmd() string {
 	var files []string
 	for _, f := range m.files {
 		files = append(files, fmt.Sprintf(`--files %s`, f))
@@ -69,7 +69,7 @@ func (m mbomboForge) Cmd() string {
 	replaceBlock := strings.Join(replaces, " \\\n")
 
 	return fmt.Sprintf(
-		`mbombo forge \
+		`mbombo \
 --out %s \
 %s \
 %s`,
