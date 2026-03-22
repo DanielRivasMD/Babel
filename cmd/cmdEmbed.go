@@ -88,7 +88,8 @@ func embedConfig(entries []BindingEntry, target string) {
 	filtered := filterByProgram(entries, target)
 
 	switch {
-	case target == "broot":
+	case target == "kanata":
+	case target == "serpl":
 
 	case target == "lazygit":
 		rawBind := make(map[string]string)
