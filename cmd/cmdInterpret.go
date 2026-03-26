@@ -186,7 +186,7 @@ func tomlList(raw string) string {
 	inner = strings.TrimPrefix(inner, "[")
 	inner = strings.TrimSuffix(inner, "]")
 
-	if strings.HasPrefix(inner, ":sh ") {
+	if strings.HasPrefix(inner, ":sh ") || strings.HasPrefix(inner, ":echo ") {
 		return fmt.Sprintf("[%q]", inner)
 	}
 
