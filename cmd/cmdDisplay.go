@@ -19,97 +19,58 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"fmt"
 	"log"
 	"sort"
 	"strings"
 
+	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
-	"github.com/ttacon/chalk"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var displayCmd = &cobra.Command{
-	Use:     "display",
-	Short:   "Display current bindings",
-	Long:    helpDisplay,
-	Example: exampleDisplay,
-
-	Run: runDisplay,
+var displayFlags struct {
+	ednFile    string
+	renderMode string
+	sortBy     string
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const (
-	tableBorder  = "=================================================================================================="
-	tableHeader  = "| Program         | Action                         | Trigger              | Binding              |"
-	tableDivider = "|-----------------|--------------------------------|----------------------|----------------------|"
-)
+func DisplayCmd() *cobra.Command {
+	d := horus.Must(domovoi.GlobalDocs())
+	cmd := horus.Must(d.MakeCmd("display", runDisplay))
 
-var programColors = map[string]chalk.Color{
-	"micro":        chalk.Cyan,
-	"helix-common": chalk.Cyan,
-	"helix-insert": chalk.Cyan,
-	"helix-normal": chalk.Cyan,
-	"helix-select": chalk.Cyan,
-	"broot":        chalk.Green,
-	"lazygit":      chalk.Green,
-	"terminal":     chalk.Blue,
-	"R":            chalk.Blue,
-	"zellij":       chalk.Yellow,
+	cmd.Flags().StringVarP(&displayFlags.ednFile, "file", "f", "", "Path to your EDN file")
+	cmd.Flags().StringVarP(&displayFlags.renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
+	cmd.Flags().StringVarP(&displayFlags.sortBy, "sort", "s", "trigger", "Sort output by one of: program, action, trigger, binding")
+
+	horus.CheckErr(cmd.RegisterFlagCompletionFunc("render", completeRenderType),
+		horus.WithOp("display.init"), horus.WithMessage("registering render completion"))
+	horus.CheckErr(cmd.RegisterFlagCompletionFunc("sort", completeSortType),
+		horus.WithOp("display.init"), horus.WithMessage("registering sort completion"))
+
+	return cmd
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func init() {
-	rootCmd.AddCommand(displayCmd)
-
-	displayCmd.Flags().StringVarP(&flags.ednFile, "file", "f", "", "Path to your EDN file")
-	displayCmd.Flags().StringVarP(&flags.renderMode, "render", "m", "DEFAULT", "Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)")
-	displayCmd.Flags().StringVarP(&flags.sortBy, "sort", "s", "trigger", "Sort output by one of: program, action, trigger, binding")
-
-	horus.CheckErr(
-		displayCmd.RegisterFlagCompletionFunc("render", completeRenderType),
-		horus.WithOp("display.init"),
-		horus.WithMessage("registering config completion for flag program"),
-	)
-
-	horus.CheckErr(
-		displayCmd.RegisterFlagCompletionFunc("sort", completeSortType),
-		horus.WithOp("display.init"),
-		horus.WithMessage("registering config completion for flag sort"),
-	)
-
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// TODO: add debug flag, or use verbose, telling which file & line we are currently reading
-// TODO: update error handlers
-// TODO: simplify run call
 func runDisplay(cmd *cobra.Command, args []string) {
-	// Resolve EDN file paths
-	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
-
-	// Parse all EDN files into structured bindings
+	paths := resolveEDNFiles(displayFlags.ednFile, rootFlags.rootDir)
 	allEntries, err := parseEDNFiles(paths)
 	if err != nil {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 
-	// Filter by program
-	filtered := filterByProgram(allEntries, flags.program)
+	filtered := filterByProgram(allEntries, rootFlags.program)
 
-	// Apply render mode
 	var final []BindingEntry
-	switch strings.ToUpper(flags.renderMode) {
+	switch strings.ToUpper(displayFlags.renderMode) {
 	case "FULL":
 		final = filtered
 	case "EMPTY":
 		for _, e := range filtered {
-			fmt.Println(e)
 			if isEmptyEntry(e) {
 				final = append(final, e)
 			}
@@ -122,47 +83,9 @@ func runDisplay(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	emitTable(final)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// tableRow is a flattened view of one binding row
-type tableRow struct {
-	Program string
-	Action  string
-	Trigger string
-	Binding string
-	Empty   bool
-}
-
-// buildKeySequence joins the second element of the rule vector into a string
-func buildKeySequence(x any) string {
-	// if x == nil {
-	// 	return ""
-	// }
-	switch kv := x.(type) {
-	case []any:
-		parts := make([]string, len(kv))
-		for i, e := range kv {
-			parts[i] = fmt.Sprint(e)
-		}
-		return strings.Join(parts, " ")
-	default:
-		return fmt.Sprint(kv)
-	}
-}
-
-// emitTable prints all rows as a Markdown table, sorted by --sort
-func emitTable(entries []BindingEntry) {
-	if len(entries) == 0 {
-		fmt.Println("No bindings found.")
-		return
-	}
-
-	// Flatten entries into rows
+	// Build rows
 	var rows []tableRow
-	for _, entry := range entries {
+	for _, entry := range final {
 		for _, action := range entry.Actions {
 			trigger := formatKeySeq(entry.Trigger, lookups.displayTrigger, action.Program, "-")
 			binding := formatBindingEntry(entry, lookups.displayBinding, action.Program)
@@ -178,7 +101,7 @@ func emitTable(entries []BindingEntry) {
 
 	// Sort rows
 	sort.Slice(rows, func(i, j int) bool {
-		switch strings.ToLower(flags.sortBy) {
+		switch strings.ToLower(displayFlags.sortBy) {
 		case "program":
 			return rows[i].Program < rows[j].Program
 		case "action":
@@ -191,82 +114,7 @@ func emitTable(entries []BindingEntry) {
 	})
 
 	// Print table
-	fmt.Println(tableBorder)
-	fmt.Println(tableHeader)
-	fmt.Println(tableDivider)
-
-	for _, r := range rows {
-		// Pick program color
-		var progColor *chalk.Color
-		if c, ok := programColors[r.Program]; ok {
-			progColor = &c
-		}
-
-		// Build row with padded + colored cells
-		row := fmt.Sprintf("| %s | %s | %s | %s |\n",
-			renderCell(r.Program, 15, progColor),
-			renderCell(r.Action, 30, nil),
-			renderCell(r.Trigger, 20, nil),
-			renderCell(r.Binding, 20, nil),
-		)
-
-		// Dim entire row if empty
-		if r.Empty {
-			row = chalk.Dim.TextStyle(row)
-		}
-
-		fmt.Print(row)
-	}
-
-	fmt.Println(tableBorder)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// renderCell pads the raw value to width, then applies color if provided
-func renderCell(val string, width int, color *chalk.Color) string {
-	raw := fmt.Sprintf("%-*s", width, val) // pad first
-	if color != nil {
-		return color.Color(raw)
-	}
-	return raw
-}
-
-func isEmptyEntry(e BindingEntry) bool {
-	if len(e.Actions) == 0 {
-		return true
-	}
-	for _, a := range e.Actions {
-		// Defensive: handle <nil> or empty
-		prog := strings.TrimSpace(fmt.Sprint(a.Program))
-		act := strings.TrimSpace(fmt.Sprint(a.Action))
-		cmd := strings.TrimSpace(fmt.Sprint(a.Command))
-
-		// If any field is meaningful, it's not empty
-		if prog != "" && prog != "<nil>" {
-			return false
-		}
-		if act != "" && act != "<nil>" {
-			return false
-		}
-		if cmd != "" && cmd != "<nil>" {
-			return false
-		}
-	}
-	return true
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func completeSortType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	options := []string{"program", "action", "trigger", "binding"}
-	var completions []string
-	for _, opt := range options {
-		if strings.HasPrefix(opt, toComplete) {
-			completions = append(completions, opt)
-		}
-	}
-	return completions, cobra.ShellCompDirectiveNoFileComp
+	printTable(rows)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
