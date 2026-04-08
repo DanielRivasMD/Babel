@@ -30,6 +30,7 @@ right_command = "<Q>"
 
 tab = "TAB"
 delete_or_backspace = "DEL"
+delete_forward = "DEL"
 return_or_enter = "RET"
 caps_lock = "<P>"
 spacebar = "<_>"
@@ -46,8 +47,7 @@ period = "."
 slash = "/"
 
 non_us_pound = "•"
-
-[broot]
+keypad_num_lock = "num-lock"
 
 
 [micro]
