@@ -602,7 +602,7 @@ func completeSortType(cmd *cobra.Command, args []string, toComplete string) ([]s
 }
 
 func completePrograms(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return []string{"helix", "helix-common", "helix-insert", "helix-normal", "helix-select", "micro"}, cobra.ShellCompDirectiveNoFileComp
+	return []string{"helix", "helix-common", "helix-insert", "helix-normal", "helix-select", "micro", "serpl"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 type tableRow struct {
@@ -722,6 +722,7 @@ func formatBinds(raw map[string]string, program string) map[string]string {
 			prettyVal = tomlList(v)
 		case program == "micro",
 			program == "lazygit",
+			program == "serpl",
 			program == "zellij":
 			prettyVal = strings.Trim(v, "[]")
 		default:
@@ -788,7 +789,24 @@ func embedConfig(entries []BindingEntry, target string) {
 
 	switch {
 	case target == "kanata":
+
 	case target == "serpl":
+		rawBind := make(map[string]string)
+		for _, entry := range filtered {
+			for _, act := range entry.Actions {
+				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, "-")
+				rawBind[bindKey] = act.Command
+			}
+		}
+		formatted := formatBinds(rawBind, target)
+		replaces := []moldReplace{}
+		for key, val := range formatted {
+			replaces = append(replaces,
+				replace(val, fmt.Sprintf("\\\"<%s>\\\" = \\\"%s\\\":line", key, val)))
+		}
+		mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
+		moldForging("embed-serpl", mf)
+
 	case target == "lazygit":
 		rawBind := make(map[string]string)
 		for _, entry := range filtered {
