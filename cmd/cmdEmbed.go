@@ -19,9 +19,7 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"fmt"
 	"log"
-	"strings"
 
 	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
@@ -68,66 +66,6 @@ func runEmbed(cmd *cobra.Command, args []string) {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
 	embedConfig(allEntries, rootFlags.program)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func embedConfig(entries []BindingEntry, target string) {
-	filtered := filterByProgram(entries, target)
-
-	switch {
-	case target == "kanata":
-	case target == "serpl":
-	case target == "lazygit":
-		rawBind := make(map[string]string)
-		for _, entry := range filtered {
-			for _, act := range entry.Actions {
-				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, "-")
-				rawBind[bindKey] = act.Command
-			}
-		}
-		formatted := formatBinds(rawBind, target)
-		replaces := []moldReplace{}
-		for key, val := range formatted {
-			replaces = append(replaces,
-				replace(val, fmt.Sprintf("    %s: '<%s>':line", val, key)))
-		}
-		mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
-		moldForging("embed-lazygit", mf)
-
-	case strings.HasPrefix(target, "zellij"):
-		normalized := normalizeProgram(target)
-		replaces := []moldReplace{}
-		for _, entry := range filtered {
-			for _, act := range entry.Actions {
-				bindKey := formatKeySeq(entry.Binding, lookups.embed, normalized, " ")
-				replaces = append(replaces, formatZellijReplace(bindKey, act))
-			}
-		}
-		moldForging(
-			"embed-zellij",
-			newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...),
-		)
-
-	default:
-		log.Fatalf("unsupported --program %q", target)
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func formatZellijReplace(key string, act ProgramAction) moldReplace {
-	escapedCmd := escapeForMold(act.Command)
-	escapedCmd = strings.Trim(escapedCmd, "[]")
-	lhs := escapedCmd
-	rhs := fmt.Sprintf("        bind \\\"%s\\\" { %s }:line", key, escapedCmd)
-	return replace(fmt.Sprintf("\"%s\"", lhs), rhs)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func escapeForMold(cmd string) string {
-	return strings.ReplaceAll(cmd, `"`, `\"`)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
