@@ -19,142 +19,114 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
+	"embed"
 	"path/filepath"
-	"regexp"
+	"sync"
 
 	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
-	"github.com/ttacon/chalk"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var rootCmd = &cobra.Command{
-	Use:     "babel",
-	Long:    helpRoot,
-	Example: exampleRoot,
-}
+//go:embed docs.json
+var docsFS embed.FS
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func Execute() {
-	horus.CheckErr(rootCmd.Execute())
-}
+const (
+	APP     = "babel"
+	VERSION = "v0.1.0"
+	AUTHOR  = "Daniel Rivas"
+	EMAIL   = "danielrivasmd@gmail.com"
+)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var rg = map[string]*regexp.Regexp{
-	"fn": regexp.MustCompile(`^([OESRTWCQ]+)(f[0-9]+)$`),
-	"ch": regexp.MustCompile(`^([OESRTWCQ]+)([a-z])$`),
-	"nb": regexp.MustCompile(`^([OESRTWCQ]+)([0-9])$`),
-	"ot": regexp.MustCompile(`^([OESRTWCQ]+)([a-z_]+)$`),
-	"kw": regexp.MustCompile(`^([OESRTWCQ]*)#P(.+)$`), // fallback for keywords like "!O#Ppage_up"
-}
 
 var (
-	dirs    configDirs
-	flags   babelFlags
-	lookups lookUps
+	onceRoot  sync.Once
+	rootCmd   *cobra.Command
+	rootFlags struct {
+		verbose bool
+		program string
+		rootDir string
+	}
+	configDirs configDir
 )
 
-type configDirs struct {
+type configDir struct {
 	home   string
 	babel  string
 	config string
 }
 
-type babelFlags struct {
-	// root
-	verbose bool
-	rootDir string
-	program string
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// display
-	ednFile    string
-	renderMode string
-	sortBy     string
-
-	// embed
-	embedTarget string
-
-	// interpret
-	interpretTarget string
-}
-
-type lookUps struct {
-	displayBinding map[string]KeyLookup
-	displayTrigger map[string]KeyLookup
-	interpret      map[string]KeyLookup
-	embed          map[string]KeyLookup
+func InitDocs() {
+	info := domovoi.AppInfo{
+		Name:    APP,
+		Version: VERSION,
+		Author:  AUTHOR,
+		Email:   EMAIL,
+	}
+	domovoi.SetGlobalDocsConfig(docsFS, info)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func init() {
-	rootCmd.PersistentFlags().BoolVarP(&flags.verbose, "verbose", "v", false, "Enable verbose diagnostics")
-	rootCmd.PersistentFlags().StringVarP(&flags.program, "program", "", "", "Regex or substring to filter Program names (e.g. helix)")
-	rootCmd.PersistentFlags().StringVarP(&flags.rootDir, "root", "", defaultRootDir(), "Config root (recurses .edn files)")
+func GetRootCmd() *cobra.Command {
+	onceRoot.Do(func() {
+		d := horus.Must(domovoi.GlobalDocs())
+		var err error
+		rootCmd, err = d.MakeCmd("root", nil)
+		horus.CheckErr(err)
 
-	horus.CheckErr(
-		displayCmd.RegisterFlagCompletionFunc("program", completePrograms),
-		horus.WithOp("root.init"),
-		horus.WithMessage("registering config completion for flag program"),
-	)
+		rootCmd.PersistentFlags().BoolVarP(&rootFlags.verbose, "verbose", "v", false, "Enable verbose diagnostics")
+		rootCmd.PersistentFlags().StringVarP(&rootFlags.program, "program", "", "", "Regex or substring to filter Program names (e.g. helix)")
+		rootCmd.PersistentFlags().StringVarP(&rootFlags.rootDir, "root", "", defaultRootDir(), "Config root (recurses .edn files)")
+		rootCmd.Version = VERSION
 
-	cobra.OnInitialize(initConfigDirs)
+		cobra.OnInitialize(initConfigDirs)
+	})
+	return rootCmd
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func Execute() {
+	horus.CheckErr(GetRootCmd().Execute())
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func initConfigDirs() {
 	var err error
-	dirs.home, err = domovoi.FindHome(flags.verbose)
+	configDirs.home, err = domovoi.FindHome(rootFlags.verbose)
 	horus.CheckErr(err, horus.WithCategory("init_error"), horus.WithMessage("getting home directory"))
-	dirs.babel = filepath.Join(dirs.home, ".babel")
-	dirs.config = filepath.Join(dirs.babel, "config")
+	configDirs.babel = filepath.Join(configDirs.home, ".babel")
+	configDirs.config = filepath.Join(configDirs.babel, "config")
 
-	lookups.displayBinding = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_binding.toml")))
-	lookups.displayTrigger = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "display_trigger.toml")))
-	lookups.interpret = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "interpret.toml")))
-	lookups.embed = buildLookupFuncs(loadFormat(filepath.Join(dirs.config, "embed.toml")))
-}
-
-func onelineErr(er string) string {
-	return chalk.Bold.TextStyle(chalk.Red.Color(er))
+	// Initialise lookup tables
+	lookups.displayBinding = buildLookupFuncs(loadFormat(filepath.Join(configDirs.config, "display_binding.toml")))
+	lookups.displayTrigger = buildLookupFuncs(loadFormat(filepath.Join(configDirs.config, "display_trigger.toml")))
+	lookups.interpret = buildLookupFuncs(loadFormat(filepath.Join(configDirs.config, "interpret.toml")))
+	lookups.embed = buildLookupFuncs(loadFormat(filepath.Join(configDirs.config, "embed.toml")))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: add config for binding interpret & display
-type KeySeq struct {
-	Mode     string
-	Modifier string
-	Key      string
-}
+func BuildCommands() {
+	root := GetRootCmd()
+	root.AddCommand(
+		CompletionCmd(),
+		IdentityCmd(),
 
-type ProgramAction struct {
-	Program string
-	Action  string
-	Command string
-}
-
-type BindingEntry struct {
-	Trigger     KeySeq
-	Binding     KeySeq
-	Sequence    string
-	Actions     []ProgramAction
-	Annotations map[string][]string // e.g. "alone" -> ["f13"]
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func completeRenderType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
-}
-
-func completePrograms(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return []string{"helix", "helix-common", "helix-insert", "helix-normal", "helix-select", "micro"}, cobra.ShellCompDirectiveNoFileComp
+		ConstructCmd(),
+		DisplayCmd(),
+		EmbedCmd(),
+		InterpretCmd(),
+	)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
