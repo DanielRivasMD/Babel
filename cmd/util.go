@@ -20,6 +20,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -824,6 +825,104 @@ func printTable(rows []tableRow) {
 		fmt.Print(row)
 	}
 	fmt.Println(tableBorder)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func embedConfig(entries []BindingEntry, target string) {
+	filtered := filterByProgram(entries, target)
+
+	switch {
+	case target == "kanata":
+	case target == "serpl":
+	case target == "lazygit":
+		rawBind := make(map[string]string)
+		for _, entry := range filtered {
+			for _, act := range entry.Actions {
+				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, "-")
+				rawBind[bindKey] = act.Command
+			}
+		}
+		formatted := formatBinds(rawBind, target)
+		replaces := []moldReplace{}
+		for key, val := range formatted {
+			replaces = append(replaces,
+				replace(val, fmt.Sprintf("    %s: '<%s>':line", val, key)))
+		}
+		mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
+		moldForging("embed-lazygit", mf)
+
+	case strings.HasPrefix(target, "zellij"):
+		normalized := normalizeProgram(target)
+		replaces := []moldReplace{}
+		for _, entry := range filtered {
+			for _, act := range entry.Actions {
+				bindKey := formatKeySeq(entry.Binding, lookups.embed, normalized, " ")
+				replaces = append(replaces, formatZellijReplace(bindKey, act))
+			}
+		}
+		moldForging(
+			"embed-zellij",
+			newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...),
+		)
+
+	default:
+		log.Fatalf("unsupported --program %q", target)
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func formatZellijReplace(key string, act ProgramAction) moldReplace {
+	escapedCmd := escapeForMold(act.Command)
+	escapedCmd = strings.Trim(escapedCmd, "[]")
+	lhs := escapedCmd
+	rhs := fmt.Sprintf("        bind \\\"%s\\\" { %s }:line", key, escapedCmd)
+	return replace(fmt.Sprintf("\"%s\"", lhs), rhs)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func escapeForMold(cmd string) string {
+	return strings.ReplaceAll(cmd, `"`, `\"`)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func emitConfig(w io.Writer, entries []BindingEntry, target string) {
+	filtered := filterByProgram(entries, target)
+	rawBind := make(map[string]string)
+	for _, entry := range filtered {
+		for _, actions := range entry.Actions {
+			bindKey := formatKeySeq(entry.Binding, lookups.interpret, actions.Program, "-")
+			rawBind[bindKey] = actions.Command
+		}
+	}
+	formatted := formatBinds(rawBind, target)
+	switch {
+	case strings.HasPrefix(target, "helix-"):
+		if headerLines, ok := programHeaders[target]; ok {
+			for _, line := range headerLines {
+				fmt.Fprintln(w, line)
+			}
+		}
+		for key, val := range formatted {
+			fmt.Fprintf(w, "%s = %s\n", key, val)
+		}
+	case target == "micro":
+		fmt.Fprintln(w, "{")
+		if headerLines, ok := programHeaders[target]; ok {
+			for _, line := range headerLines {
+				fmt.Fprintln(w, line)
+			}
+		}
+		for key, val := range formatted {
+			fmt.Fprintf(w, "  %q: %q,\n", key, val)
+		}
+		fmt.Fprintln(w, "}")
+	default:
+		log.Fatalf("unsupported --program %q", target)
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
