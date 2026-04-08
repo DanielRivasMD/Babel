@@ -615,52 +615,6 @@ type tableRow struct {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func emitTable(entries []BindingEntry) {
-	if len(entries) == 0 {
-		fmt.Println("No bindings found.")
-		return
-	}
-	var rows []tableRow
-	for _, entry := range entries {
-		for _, action := range entry.Actions {
-			trigger := formatKeySeq(entry.Trigger, lookups.displayTrigger, action.Program, "-")
-			binding := formatBindingEntry(entry, lookups.displayBinding, action.Program)
-			rows = append(rows, tableRow{
-				Program: action.Program,
-				Action:  action.Action,
-				Trigger: trigger,
-				Binding: binding,
-				Empty:   isEmptyEntry(entry),
-			})
-		}
-	}
-	// Sort rows (requires access to displayFlags.sortBy; we'll use a package variable later)
-	// Sorting will be done in the display command because it needs the flag.
-	// For now we'll leave sorting to the caller; we'll just print unsorted.
-	fmt.Println(tableBorder)
-	fmt.Println(tableHeader)
-	fmt.Println(tableDivider)
-	for _, r := range rows {
-		var progColor *chalk.Color
-		if c, ok := programColors[r.Program]; ok {
-			progColor = &c
-		}
-		row := fmt.Sprintf("| %s | %s | %s | %s |\n",
-			renderCell(r.Program, 15, progColor),
-			renderCell(r.Action, 30, nil),
-			renderCell(r.Trigger, 20, nil),
-			renderCell(r.Binding, 20, nil),
-		)
-		if r.Empty {
-			row = chalk.Dim.TextStyle(row)
-		}
-		fmt.Print(row)
-	}
-	fmt.Println(tableBorder)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func renderCell(val string, width int, color *chalk.Color) string {
 	raw := fmt.Sprintf("%-*s", width, val)
 	if color != nil {
