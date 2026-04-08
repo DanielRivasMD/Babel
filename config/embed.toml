@@ -1,6 +1,3 @@
-[broot]
-
-
 [lazygit]
 home = "home"
 end = "end"
@@ -20,6 +17,30 @@ R = "s"
 spacebar = "space"
 delete_forward = "del"
 delete_or_backspace = "backspace"
+
+
+[serpl]
+T = "Ctrl"
+W = "Ctrl"
+O = "Alt"
+E = "Alt"
+S = "Shift"
+R = "Shift"
+
+spacebar = "Space"
+delete_or_backspace = "Backspace"
+return_or_enter = "Return"
+tab = "Tab"
+escape = "Esc"
+up_arrow = "Up"
+down_arrow = "Down"
+left_arrow = "Left"
+right_arrow = "Right"
+home = "Home"
+end = "End"
+page_up = "PageUp"
+page_down = "PageDown"
+
 
 [zellij]
 home = "Home"
