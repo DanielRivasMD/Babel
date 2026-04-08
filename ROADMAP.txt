@@ -4,26 +4,6 @@
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - refactor redundant functions & workflows
 
-- add configuration for serpl
-
 
 ==================================================
-cmd/cmdDisplay.go
-  line 89     TODO   add debug flag, or use verbose, telling which file & line we are currently reading
-  line 90     TODO   update error handlers
-  line 91     TODO   simplify run call
-cmd/cmdInterpret.go
-  line 207    TODO   pass as config toml
-cmd/root.go
-  line 129    TODO   add config for binding interpret & display
-cmd/utilIO.go
-  line 25     TODO   load values on config
-  line 148    TODO   update default root dir definition
-  line 155    TODO   update error habdling
-cmd/utilParse.go
-  line 283    TODO   validate flags on prerun
-  line 317    TODO   reuse parse functions to render keyboard
-  line 338    TODO   add lefts
-  line 358    TODO   high level: parse edn => read file line by line to extract values. mount on structs to indicate config & color
-  line 359    TODO   high level: generate markdown => extract values mounted on structs
 ==================================================

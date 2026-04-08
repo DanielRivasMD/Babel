@@ -35,7 +35,6 @@ func ConstructCmd() *cobra.Command {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func runConstruct(cmd *cobra.Command, args []string) {
-	// TODO: implement construct logic
 	createSubdirs(configDirs, rootFlags.verbose)
 }
 
