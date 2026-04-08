@@ -1,12 +1,12 @@
 module github.com/DanielRivasMD/Babel
 
-go 1.23.4
+go 1.25
 
 require (
 	github.com/BurntSushi/toml v1.5.0
-	github.com/DanielRivasMD/domovoi v0.0.0-20250910075839-83597940b8dd
-	github.com/DanielRivasMD/horus v0.0.0-20250904055742-a30876ce2555
-	github.com/spf13/cobra v1.9.1
+	github.com/DanielRivasMD/domovoi v0.2.0
+	github.com/DanielRivasMD/horus v1.1.0
+	github.com/spf13/cobra v1.10.2
 	github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3
 )
