@@ -23,63 +23,51 @@ import (
 	"log"
 	"strings"
 
+	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var embedCmd = &cobra.Command{
-	Use:     "embed",
-	Short:   "",
-	Long:    helpEmbed,
-	Example: exampleEmbed,
-
-	PreRun: preEmbed,
-	Run:    runEmbed,
+var embedFlags struct {
+	target string
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func init() {
-	rootCmd.AddCommand(embedCmd)
+func EmbedCmd() *cobra.Command {
+	d := horus.Must(domovoi.GlobalDocs())
+	cmd := horus.Must(d.MakeCmd("embed", runEmbed))
 
-	embedCmd.Flags().StringVarP(&flags.embedTarget, "target", "", "", "Config file to supplement")
+	cmd.Flags().StringVarP(&embedFlags.target, "target", "", "", "Config file to supplement")
+	cmd.PreRun = preEmbed
+
+	return cmd
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func preEmbed(cmd *cobra.Command, args []string) {
-	horus.CheckEmpty(
-		flags.program,
-		"",
+	horus.CheckEmpty(rootFlags.program, "",
 		horus.WithMessage("`--program` is required"),
 		horus.WithExitCode(2),
-		horus.WithFormatter(func(he *horus.Herror) string { return onelineErr(he.Message) }),
-	)
-	horus.CheckEmpty(
-		flags.rootDir,
-		"",
+		horus.WithFormatter(func(he *horus.Herror) string { return horus.OneLineErr(he.Message) }))
+	horus.CheckEmpty(rootFlags.rootDir, "",
 		horus.WithMessage("`--root` is required"),
 		horus.WithExitCode(2),
-		horus.WithFormatter(func(he *horus.Herror) string { return onelineErr(he.Message) }),
-	)
+		horus.WithFormatter(func(he *horus.Herror) string { return horus.OneLineErr(he.Message) }))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func runEmbed(cmd *cobra.Command, args []string) {
-	// Resolve EDN file paths
-	paths := resolveEDNFiles(flags.ednFile, flags.rootDir)
-
-	// Parse all EDN files into structured bindings
+	paths := resolveEDNFiles("", rootFlags.rootDir)
 	allEntries, err := parseEDNFiles(paths)
 	if err != nil {
 		log.Fatalf("EDN parsing error: %v", err)
 	}
-
-	// Embed for single target
-	embedConfig(allEntries, flags.program)
+	embedConfig(allEntries, rootFlags.program)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +78,6 @@ func embedConfig(entries []BindingEntry, target string) {
 	switch {
 	case target == "kanata":
 	case target == "serpl":
-
 	case target == "lazygit":
 		rawBind := make(map[string]string)
 		for _, entry := range filtered {
@@ -99,20 +86,17 @@ func embedConfig(entries []BindingEntry, target string) {
 				rawBind[bindKey] = act.Command
 			}
 		}
-
 		formatted := formatBinds(rawBind, target)
 		replaces := []moldReplace{}
 		for key, val := range formatted {
 			replaces = append(replaces,
 				replace(val, fmt.Sprintf("    %s: '<%s>':line", val, key)))
 		}
-
-		mf := newMoldConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...)
+		mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
 		moldForging("embed-lazygit", mf)
 
 	case strings.HasPrefix(target, "zellij"):
 		normalized := normalizeProgram(target)
-
 		replaces := []moldReplace{}
 		for _, entry := range filtered {
 			for _, act := range entry.Actions {
@@ -120,10 +104,9 @@ func embedConfig(entries []BindingEntry, target string) {
 				replaces = append(replaces, formatZellijReplace(bindKey, act))
 			}
 		}
-
 		moldForging(
 			"embed-zellij",
-			newMoldConfig(flags.embedTarget, []string{flags.embedTarget}, replaces...),
+			newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...),
 		)
 
 	default:
@@ -131,22 +114,18 @@ func embedConfig(entries []BindingEntry, target string) {
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func formatZellijReplace(key string, act ProgramAction) moldReplace {
-	// Escape the command dynamically
 	escapedCmd := escapeForMold(act.Command)
 	escapedCmd = strings.Trim(escapedCmd, "[]")
-
-	// Left-hand side is the command string as it appears in EDN (escaped for mbombo)
 	lhs := escapedCmd
-
-	// Right-hand side is the KDL bind line
 	rhs := fmt.Sprintf("        bind \\\"%s\\\" { %s }:line", key, escapedCmd)
-
 	return replace(fmt.Sprintf("\"%s\"", lhs), rhs)
 }
 
-// escapeForMold takes a raw command string (from EDN :exec)
-// and returns a shell-safe string with quotes escaped for mbombo
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func escapeForMold(cmd string) string {
 	return strings.ReplaceAll(cmd, `"`, `\"`)
 }
