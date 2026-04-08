@@ -19,29 +19,49 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
+	"fmt"
+
+	"github.com/DanielRivasMD/domovoi"
+	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var constructCmd = &cobra.Command{
-	Use:     "construct",
-	Short:   "",
-	Long:    helpConstruct,
-	Example: exampleConstruct,
-
-	Run: runConstruct,
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func init() {
-	rootCmd.AddCommand(constructCmd)
+func ConstructCmd() *cobra.Command {
+	return horus.Must(horus.Must(domovoi.GlobalDocs()).MakeCmd("construct", runConstruct))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func runConstruct(cmd *cobra.Command, args []string) {
+	// TODO: implement construct logic
+	createSubdirs(configDirs, rootFlags.verbose)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func createSubdirs(d configDir, verbose bool) {
+	const op = "construct.createSubDirs"
+
+	toCreate := []struct {
+		label, path string
+	}{
+		{"babel root", d.babel},
+		{"config", d.config},
+	}
+
+	for _, dir := range toCreate {
+		horus.CheckErr(
+			domovoi.CreateDir(dir.path, verbose),
+			horus.WithOp(op),
+			horus.WithCategory("io_error"),
+			horus.WithMessage(fmt.Sprintf("creating %s directory", dir.label)),
+			horus.WithDetails(map[string]any{
+				"path": dir.path,
+			}),
+		)
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
