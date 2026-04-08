@@ -87,6 +87,9 @@ func GetRootCmd() *cobra.Command {
 		rootCmd.PersistentFlags().StringVarP(&rootFlags.rootDir, "root", "", defaultRootDir(), "Config root (recurses .edn files)")
 		rootCmd.Version = VERSION
 
+		horus.CheckErr(rootCmd.RegisterFlagCompletionFunc("program", completePrograms),
+			horus.WithOp("root.init"), horus.WithMessage("registering program completion"))
+
 		cobra.OnInitialize(initConfigDirs)
 	})
 	return rootCmd
