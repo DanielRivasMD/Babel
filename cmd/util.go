@@ -87,9 +87,11 @@ var (
 		"helix-common": chalk.Cyan,
 		"helix-insert": chalk.Cyan,
 		"helix-normal": chalk.Cyan,
+		"helix-pop":    chalk.Cyan,
 		"helix-select": chalk.Cyan,
 		"broot":        chalk.Green,
 		"lazygit":      chalk.Green,
+		"serpl":        chalk.Green,
 		"terminal":     chalk.Blue,
 		"R":            chalk.Blue,
 		"zellij":       chalk.Yellow,
@@ -414,6 +416,7 @@ func filterByProgram(entries []BindingEntry, programFilter string) []BindingEntr
 	if programFilter == "" {
 		return entries
 	}
+	// TODO: replace with horus.OneLineErr
 	progRE, err := regexp.Compile(programFilter)
 	if err != nil {
 		log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
@@ -586,6 +589,7 @@ func normalizeFunctionKey(key string) string {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: load completions from toml or const
 func completeRenderType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return []string{"empty", "full", "default"}, cobra.ShellCompDirectiveNoFileComp
 }
@@ -789,40 +793,17 @@ func embedConfig(entries []BindingEntry, target string) {
 
 	switch {
 	case target == "kanata":
+		// TODO: implement kanata
 
 	case target == "serpl":
-		rawBind := make(map[string]string)
-		for _, entry := range filtered {
-			for _, act := range entry.Actions {
-				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, "-")
-				rawBind[bindKey] = act.Command
-			}
-		}
-		formatted := formatBinds(rawBind, target)
-		replaces := []moldReplace{}
-		for key, val := range formatted {
-			replaces = append(replaces,
-				replace(val, fmt.Sprintf("\\\"<%s>\\\" = \\\"%s\\\":line", key, val)))
-		}
-		mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
-		moldForging("embed-serpl", mf)
+		embedBindings(entries, target, func(key, val string) string {
+			return fmt.Sprintf("\\\"<%s>\\\" = \\\"%s\\\":line", key, val)
+		})
 
 	case target == "lazygit":
-		rawBind := make(map[string]string)
-		for _, entry := range filtered {
-			for _, act := range entry.Actions {
-				bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, "-")
-				rawBind[bindKey] = act.Command
-			}
-		}
-		formatted := formatBinds(rawBind, target)
-		replaces := []moldReplace{}
-		for key, val := range formatted {
-			replaces = append(replaces,
-				replace(val, fmt.Sprintf("    %s: '<%s>':line", val, key)))
-		}
-		mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
-		moldForging("embed-lazygit", mf)
+		embedBindings(entries, target, func(key, val string) string {
+			return fmt.Sprintf("    %s: '<%s>':line", val, key)
+		})
 
 	case strings.HasPrefix(target, "zellij"):
 		normalized := normalizeProgram(target)
@@ -841,6 +822,32 @@ func embedConfig(entries []BindingEntry, target string) {
 	default:
 		log.Fatalf("unsupported --program %q", target)
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// embedBindings generates replacements for a target program
+// formatFunc receives (key, val) and returns the replacement string (including :line suffix if needed)
+func embedBindings(entries []BindingEntry, target string, formatFunc func(key, val string) string) {
+	filtered := filterByProgram(entries, target)
+
+	rawBind := make(map[string]string)
+	for _, entry := range filtered {
+		for _, act := range entry.Actions {
+			bindKey := formatKeySeq(entry.Binding, lookups.embed, act.Program, "-")
+			rawBind[bindKey] = act.Command
+		}
+	}
+	formatted := formatBinds(rawBind, target)
+
+	replaces := []moldReplace{}
+	for key, val := range formatted {
+		newLine := formatFunc(key, val)
+		replaces = append(replaces, replace(val, newLine))
+	}
+
+	mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
+	moldForging(fmt.Sprintf("embed-%s", target), mf)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
