@@ -21,25 +21,18 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/DanielRivasMD/domovoi"
+	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
 	"github.com/ttacon/chalk"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var identityCmd = &cobra.Command{
-	Use:     "identity",
-	Aliases: []string{"id"},
-	Hidden:  true,
-	Short:   `Reveal `,
-
-	Run: runIdentity,
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func init() {
-	rootCmd.AddCommand(identityCmd)
+func IdentityCmd() *cobra.Command {
+	return horus.Must(horus.Must(domovoi.GlobalDocs()).MakeCmd("identity", runIdentity,
+		domovoi.WithAliases([]string{"id"}),
+	))
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
