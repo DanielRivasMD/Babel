@@ -23,7 +23,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
@@ -93,44 +92,6 @@ func runInterpret(cmd *cobra.Command, args []string) {
 	}
 	emitConfig(w, allEntries, rootFlags.program)
 	fmt.Fprintln(w)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func emitConfig(w io.Writer, entries []BindingEntry, target string) {
-	filtered := filterByProgram(entries, target)
-	rawBind := make(map[string]string)
-	for _, entry := range filtered {
-		for _, actions := range entry.Actions {
-			bindKey := formatKeySeq(entry.Binding, lookups.interpret, actions.Program, "-")
-			rawBind[bindKey] = actions.Command
-		}
-	}
-	formatted := formatBinds(rawBind, target)
-	switch {
-	case strings.HasPrefix(target, "helix-"):
-		if headerLines, ok := programHeaders[target]; ok {
-			for _, line := range headerLines {
-				fmt.Fprintln(w, line)
-			}
-		}
-		for key, val := range formatted {
-			fmt.Fprintf(w, "%s = %s\n", key, val)
-		}
-	case target == "micro":
-		fmt.Fprintln(w, "{")
-		if headerLines, ok := programHeaders[target]; ok {
-			for _, line := range headerLines {
-				fmt.Fprintln(w, line)
-			}
-		}
-		for key, val := range formatted {
-			fmt.Fprintf(w, "  %q: %q,\n", key, val)
-		}
-		fmt.Fprintln(w, "}")
-	default:
-		log.Fatalf("unsupported --program %q", target)
-	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
