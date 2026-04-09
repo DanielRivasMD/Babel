@@ -1,9 +1,14 @@
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
+- render binds through babel can be implemented also to other programs => yazi & lazygit?
 - render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - refactor redundant functions & workflows
 
 
 ==================================================
+cmd/util.go
+  line 419    TODO   replace with horus.OneLineErr
+  line 592    TODO   load completions from toml or const
+  line 796    TODO   implement kanata
 ==================================================
