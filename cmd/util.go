@@ -103,6 +103,7 @@ var (
 
 	TC = "TC" // prefix used in EDN parsing for markdown generation
 
+	// TODO: move away from hardcoded variables => load from template
 	programHeaders = map[string][]string{
 		"helix-common": {},
 		"helix-insert": {

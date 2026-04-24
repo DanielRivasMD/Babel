@@ -8,7 +8,8 @@
 
 ==================================================
 cmd/util.go
-  line 419    TODO   replace with horus.OneLineErr
-  line 592    TODO   load completions from toml or const
-  line 796    TODO   implement kanata
+  line 106    TODO   move away from hardcoded variables => load from template
+  line 459    TODO   replace with horus.OneLineErr
+  line 632    TODO   load completions from toml or const
+  line 836    TODO   implement kanata
 ==================================================
