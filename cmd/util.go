@@ -834,7 +834,16 @@ func embedConfig(entries []BindingEntry, target string) {
 
 	switch {
 	case target == "kanata":
-		// TODO: implement kanata
+		replaces := []moldReplace{}
+		for _, entry := range entries {
+			bindKey := formatKeySeq(entry.Binding, lookups.embed, "kanata", " ")
+			triggerKey := formatKeySeq(entry.Trigger, lookups.embed, "kanata", " ")
+			replaces = append(replaces, formatKanataReplace(bindKey, triggerKey))
+		}
+		moldForging(
+			"embed-kanata",
+			newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...),
+		)
 
 	case target == "serpl":
 		embedBindings(entries, target, func(key, val string) string {
@@ -889,6 +898,12 @@ func embedBindings(entries []BindingEntry, target string, formatFunc func(key, v
 
 	mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
 	moldForging(fmt.Sprintf("embed-%s", target), mf)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func formatKanataReplace(trigger, bind string) moldReplace {
+	return replace(fmt.Sprintf("  %s  %s:line", trigger, bind), bind)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
