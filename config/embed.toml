@@ -1,3 +1,26 @@
+[kanata]
+T = "C"
+W = "C"
+O = "A"
+E = "A"
+S = "S"
+R = "S"
+
+spacebar = "spc"
+delete_or_backspace = "bspc"
+return_or_enter = "ret"
+tab = "tab"
+escape = "esc"
+up_arrow = "▲"
+down_arrow = "▼"
+left_arrow = "◀"
+right_arrow = "▶"
+home = "home"
+end = "end"
+page_up = "pgup"
+page_down = "pgdn"
+
+
 [lazygit]
 home = "home"
 end = "end"
