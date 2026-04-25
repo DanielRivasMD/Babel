@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 Daniel Rivas <danielrivasmd@gmail.com>
+Copyright © 2026 Daniel Rivas <danielrivasmd@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,22 +19,33 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
+	"fmt"
+
 	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
-	"github.com/spf13/cobra"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func ConstructCmd() *cobra.Command {
-	return horus.Must(horus.Must(domovoi.GlobalDocs()).MakeCmd("construct", runConstruct))
-}
+func createSubdirs(d configDir, verbose bool, op string) {
+	toCreate := []struct {
+		label, path string
+	}{
+		{"babel root", d.babel},
+		{"config", d.config},
+	}
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func runConstruct(cmd *cobra.Command, args []string) {
-	const op = "babel.construct"
-	createSubdirs(configDirs, rootFlags.verbose, op)
+	for _, dir := range toCreate {
+		horus.CheckErr(
+			domovoi.CreateDir(dir.path, verbose),
+			horus.WithOp(op),
+			horus.WithCategory("io_error"),
+			horus.WithMessage(fmt.Sprintf("creating %s directory", dir.label)),
+			horus.WithDetails(map[string]any{
+				"path": dir.path,
+			}),
+		)
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
