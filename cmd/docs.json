@@ -60,6 +60,11 @@
       ]
     ]
   },
+  "compose": {
+    "use": "compose",
+    "short": "Create templates",
+    "long": "Compose templates"
+  },
   "embed": {
     "use": "embed",
     "short": "Insert program-specific configs from EDN annotations",

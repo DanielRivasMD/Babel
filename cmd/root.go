@@ -110,7 +110,6 @@ func initConfigDirs() {
 	configDirs.babel = filepath.Join(configDirs.home, ".babel")
 	configDirs.config = filepath.Join(configDirs.babel, "config")
 
-	// Initialise lookup tables
 	lookups.displayBinding = buildLookupFuncs(loadFormat(filepath.Join(configDirs.config, "display_binding.toml")))
 	lookups.displayTrigger = buildLookupFuncs(loadFormat(filepath.Join(configDirs.config, "display_trigger.toml")))
 	lookups.interpret = buildLookupFuncs(loadFormat(filepath.Join(configDirs.config, "interpret.toml")))
@@ -126,6 +125,7 @@ func BuildCommands() {
 		IdentityCmd(),
 
 		ConstructCmd(),
+		ComposeCmd(),
 		DisplayCmd(),
 		EmbedCmd(),
 		InterpretCmd(),
