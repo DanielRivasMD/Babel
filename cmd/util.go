@@ -648,7 +648,7 @@ func completeSortType(cmd *cobra.Command, args []string, toComplete string) ([]s
 }
 
 func completePrograms(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return []string{"helix", "helix-common", "helix-insert", "helix-normal", "helix-select", "micro", "serpl"}, cobra.ShellCompDirectiveNoFileComp
+	return []string{"helix", "helix-common", "helix-insert", "helix-normal", "helix-select", "kanata", "micro", "serpl", "zellij"}, cobra.ShellCompDirectiveNoFileComp
 }
 
 type tableRow struct {
@@ -718,6 +718,7 @@ func newMoldConfig(outFile string, inFiles []string, replaces ...moldReplace) mo
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func moldForging(op string, mf moldForge) {
+	fmt.Println(mf.Cmd())
 	horus.CheckErr(
 		domovoi.ExecSh(mf.Cmd()),
 		horus.WithOp(op),
@@ -834,27 +835,82 @@ func embedConfig(entries []BindingEntry, target string) {
 	filtered := filterByProgram(entries, target)
 
 	switch {
+
 	case target == "kanata":
+		// List of programs whose bindings we want to use for kanata remapping.
+		allowedPrograms := map[string]bool{
+			"serpl": true,
+		}
+
 		replaces := []moldReplace{}
 		for _, entry := range entries {
-			bindKey := formatKeySeq(entry.Binding, lookups.embed, "kanata", " ")
-			triggerKey := formatKeySeq(entry.Trigger, lookups.embed, "kanata", " ")
-			replaces = append(replaces, formatKanataReplace(bindKey, triggerKey))
+			// Check if any action belongs to an allowed program
+			var hasAllowed bool
+			for _, act := range entry.Actions {
+				if allowedPrograms[act.Program] {
+					hasAllowed = true
+					break
+				}
+			}
+			if !hasAllowed {
+				continue
+			}
+
+			// fmt.Println(entry.Trigger.Key)
+			// fmt.Println(entry.Trigger.Mode)
+			// fmt.Println(entry.Trigger.Modifier)
+			// Format the trigger (input) using kanata's lookup and empty separator
+			// triggerKey := formatKeySeq(entry.Trigger, lookups.embed, "kanata", "")
+			// if triggerKey == "" {
+			// 	continue
+			// }
+
+			triggerKey := entry.Trigger.Modifier + entry.Trigger.Key
+			if triggerKey != "Oq" {
+				continue
+			}
+			fmt.Println(triggerKey)
+
+			// Format the binding (output) similarly
+			bindKey := formatKeySeq(entry.Binding, lookups.embed, "kanata", "")
+			if bindKey == "" {
+				continue
+			}
+			fmt.Println(bindKey)
+
+			bindKey = "A-q"
+			
+			// Construct the line as it appears in the compose template:
+			// "  {trigger}      XX"
+			linePrefix := fmt.Sprintf("  %s", triggerKey)
+			padding := 10 - len(linePrefix)
+			if padding < 1 {
+				padding = 1
+			}
+			oldLine := triggerKey
+			newLine := linePrefix + strings.Repeat(" ", padding) + bindKey + ":line"
+
+			replaces = append(replaces, replace(oldLine, newLine))
 		}
-		moldForging(
-			"embed-kanata",
-			newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...),
-		)
+
+		// TODO: handle sequence annotations (chords, multiple triggers)
+		if len(replaces) == 0 {
+			log.Printf("Warning: No kanata bindings found for allowed programs")
+		}
+		mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
+		moldForging("embed-kanata", mf)
 
 	case target == "serpl":
 		embedBindings(entries, target, func(key, val string) string {
+			x := fmt.Sprintf("\\\"<%s>\\\" = \\\"%s\\\":line", key, val)
+			println(x)
 			return fmt.Sprintf("\\\"<%s>\\\" = \\\"%s\\\":line", key, val)
 		})
 
-	case target == "lazygit":
-		embedBindings(entries, target, func(key, val string) string {
-			return fmt.Sprintf("    %s: '<%s>':line", val, key)
-		})
+	// case target == "lazygit":
+	// 	embedBindings(entries, target, func(key, val string) string {
+	// 		return fmt.Sprintf("    %s: '<%s>':line", val, key)
+	// 	})
 
 	case strings.HasPrefix(target, "zellij"):
 		normalized := normalizeProgram(target)
@@ -899,6 +955,7 @@ func embedBindings(entries []BindingEntry, target string, formatFunc func(key, v
 
 	mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
 	moldForging(fmt.Sprintf("embed-%s", target), mf)
+	fmt.Println(mf)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
