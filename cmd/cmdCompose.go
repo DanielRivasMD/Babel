@@ -19,10 +19,6 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
 	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
@@ -49,59 +45,7 @@ func ComposeCmd() *cobra.Command {
 
 func runCompose(cmd *cobra.Command, args []string) {
 	const op = "babel.compose"
-
-	if rootFlags.program != "kanata" {
-		horus.CheckErr(
-			fmt.Errorf("unsupported program %q for compose", rootFlags.program),
-			horus.WithOp(op),
-			horus.WithExitCode(1),
-		)
-	}
-
-	prefixes := []string{
-		"T", "TS", "O", "OS", "C", "CS", "J", "S", "R", "Q", "QR", "E", "ER", "W", "WS", "tab", "q", "w", "z", "zS",
-	}
-
-	var suffixes []string
-	for i := 1; i <= 9; i++ {
-		suffixes = append(suffixes, fmt.Sprintf("%d", i))
-	}
-	suffixes = append(suffixes, "0")
-	for c := 'a'; c <= 'z'; c++ {
-		suffixes = append(suffixes, string(c))
-	}
-	suffixes = append(suffixes,
-		"hy", "eq", "db", "ob", "cb", "sc", "qu",
-		"bl", "cm", "pe", "sl", "ret", "spc",
-		"kR", "kE", "kQ", "kC", "kO", "kT", "kS", "kW",
-	)
-
-	var out strings.Builder
-	out.WriteString("(defalias\n")
-
-	for i, p := range prefixes {
-		for _, s := range suffixes {
-			key := p + s
-			line := fmt.Sprintf("  %s", key)
-			padding := 10 - len(line)
-			if padding < 1 {
-				padding = 1
-			}
-			line += strings.Repeat(" ", padding) + "XX\n"
-			out.WriteString(line)
-		}
-		if i + 1 != len(prefixes) {
-			out.WriteString("\n")
-		}
-	}
-	out.WriteString(")\n")
-
-	if composeFlags.template != "" {
-		err := os.WriteFile(composeFlags.template, []byte(out.String()), 0644)
-		horus.CheckErr(err, horus.WithOp(op), horus.WithMessage("writing template file"))
-	} else {
-		fmt.Print(out.String())
-	}
+	compose(op)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
