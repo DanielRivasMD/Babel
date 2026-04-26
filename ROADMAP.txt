@@ -2,14 +2,30 @@
 - wire up sql generation command with lsp
 
 - render binds through babel can be implemented also to other programs => yazi & lazygit?
-- render a color coded keyboard for empty & used bindings right from the table => `babel display --layout`
 - refactor redundant functions & workflows
+- render a color coded keyboard
+  for empty (dimmed) & used bindings (colored & bold)
+  add tab completion for bindable modifiers => right-alt, right-cmd, left-shift, etc
+
 
 
 ==================================================
-cmd/util.go
-  line 106    TODO   move away from hardcoded variables => load from template
-  line 459    TODO   replace with horus.OneLineErr
-  line 632    TODO   load completions from toml or const
-  line 836    TODO   implement kanata
+cmd/cmdDisplay.go
+  line 59     TODO   add error handler horus
+cmd/cmdEmbed.go
+  line 62     TODO   add error handler horus
+cmd/root.go
+  line 148    TODO   load completions from toml or const
+  line 153    TODO   add static sorting for display rendering instead of alphabetical
+  line 201    TODO   move away from hardcoded variables => load from template
+cmd/utilEmbed.go
+  line 91     TODO   handle sequence annotations (chords, multiple triggers)
+  line 124    TODO   add horus error handler
+cmd/utilLookups.go
+  line 88     TODO   redundant functions?
+  line 89     TODO   use horus error handling
+cmd/utilParser.go
+  line 321    TODO   replace with horus.OneLineErr
+  line 452    TODO   expand normalize to other programs beyond zellij, micro & helix
+  line 510    TODO   use horus error handler
 ==================================================
