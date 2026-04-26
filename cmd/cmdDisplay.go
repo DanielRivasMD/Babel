@@ -56,6 +56,7 @@ func DisplayCmd() *cobra.Command {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: add error handler horus
 func runDisplay(cmd *cobra.Command, args []string) {
 	paths := resolveEDNFiles(displayFlags.ednFile, rootFlags.rootDir)
 	allEntries, err := parseEDNFiles(paths)
