@@ -59,6 +59,7 @@ func preEmbed(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: add error handler horus
 func runEmbed(cmd *cobra.Command, args []string) {
 	paths := resolveEDNFiles("", rootFlags.rootDir)
 	allEntries, err := parseEDNFiles(paths)
