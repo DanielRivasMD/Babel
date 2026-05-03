@@ -32,15 +32,16 @@ func embedConfig(entries []BindingEntry, target string) {
 	switch {
 
 	case target == "kanata":
-		// List of programs whose bindings we want to use for kanata remapping.
+		// Programs that contribute to kanata remapping (triggers and bindings)
 		allowedPrograms := map[string]bool{
-			"serpl": true,
+			"helix": true, "serpl": true, "lazygit": true,
+			"zellij": true, "terminal": true, "R": true, "kanata": true,
 		}
 
 		replaces := []moldReplace{}
 		for _, entry := range entries {
 			// Check if any action belongs to an allowed program
-			var hasAllowed bool
+			hasAllowed := false
 			for _, act := range entry.Actions {
 				if allowedPrograms[act.Program] {
 					hasAllowed = true
@@ -50,45 +51,34 @@ func embedConfig(entries []BindingEntry, target string) {
 			if !hasAllowed {
 				continue
 			}
+			fmt.Println(entry.Trigger)
 
-			// fmt.Println(entry.Trigger.Key)
-			// fmt.Println(entry.Trigger.Mode)
-			// fmt.Println(entry.Trigger.Modifier)
-			// Format the trigger (input) using kanata's lookup and empty separator
-			// triggerKey := formatKeySeq(entry.Trigger, lookups.embed, "kanata", "")
-			// if triggerKey == "" {
-			// 	continue
-			// }
-
-			triggerKey := entry.Trigger.Modifier + entry.Trigger.Key
-			if triggerKey != "Oq" {
+			triggerKey := formatTriggerEntry(entry.Trigger, lookups.embed, "kanata", triggerTransforms)
+			if triggerKey == "" {
 				continue
 			}
+
 			fmt.Println(triggerKey)
 
-			// Format the binding (output) similarly
 			bindKey := formatKeySeq(entry.Binding, lookups.embed, "kanata", "")
 			if bindKey == "" {
 				continue
 			}
-			fmt.Println(bindKey)
 
-			bindKey = "A-q"
-
-			// Construct the line as it appears in the compose template:
-			// "  {trigger}      XX"
+			// Construct the line as it appears in the compose template
+			// Template line: "  {trigger}      XX"
 			linePrefix := fmt.Sprintf("  %s", triggerKey)
 			padding := 10 - len(linePrefix)
 			if padding < 1 {
 				padding = 1
 			}
-			oldLine := triggerKey
-			newLine := linePrefix + strings.Repeat(" ", padding) + bindKey + ":line"
+			oldLine := linePrefix
+			newLine := linePrefix + strings.Repeat(" ", padding) + bindKey
 
-			replaces = append(replaces, replace(oldLine, newLine))
+			// Replace the entire line containing the old string
+			replaces = append(replaces, replace(oldLine, newLine+":line"))
 		}
 
-		// TODO: handle sequence annotations (chords, multiple triggers)
 		if len(replaces) == 0 {
 			log.Printf("Warning: No kanata bindings found for allowed programs")
 		}
