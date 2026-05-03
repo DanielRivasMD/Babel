@@ -401,6 +401,35 @@ func formatKeySeq(k KeySeq, lookups map[string]KeyLookup, program, sep string) s
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func formatTriggerEntry(k KeySeq, lookups map[string]KeyLookup, program string, transforms map[string]string) string {
+	lookup := lookups[normalizeProgram(program)]
+	if lookup == nil {
+		lookup = lookups["default"]
+	}
+	var modParts []string
+	for _, r := range k.Modifier {
+		modParts = append(modParts, lookup(string(r)))
+	}
+	mod := strings.Join(modParts, "") // no separator
+	// key := functionKey2UpperCase(k.Key)
+
+	key := transforms[k.Key]
+
+	// mapped := lookup(key)
+	var out string
+	if mod != "" {
+		out = mod + key
+	} else {
+		out = key
+	}
+	if k.Mode != "" {
+		out = k.Mode + out
+	}
+	return out
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func formatBindingEntry(b BindingEntry, lookups map[string]KeyLookup, program string) string {
 	lookup := lookups[normalizeProgram(program)]
 	if lookup == nil {
@@ -451,6 +480,9 @@ func escapeForMold(cmd string) string {
 
 // TODO: expand normalize to other programs beyond zellij, micro & helix
 func normalizeProgram(p string) string {
+	if p == "kanata" {
+		return "kanata"
+	}
 	switch {
 	case strings.Contains(p, "zellij"):
 		return "zellij"
