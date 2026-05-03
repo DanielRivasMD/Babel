@@ -34,6 +34,19 @@ var embedFlags struct {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var triggerTransforms = map[string]string{
+	"return_or_enter":     "ret",
+	"spacebar":            "sp",
+	"right_shift":         "kR",
+	"delete_or_backspace": "db",
+	"up_arrow":            "▲",
+	"down_arrow":          "▼",
+	"left_arrow":          "◀",
+	"right_arrow":         "▶",
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func EmbedCmd() *cobra.Command {
 	d := horus.Must(domovoi.GlobalDocs())
 	cmd := horus.Must(d.MakeCmd("embed", runEmbed))
