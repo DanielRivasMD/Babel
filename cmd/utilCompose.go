@@ -50,8 +50,12 @@ func compose(op string) {
 		suffixes = append(suffixes, string(c))
 	}
 	suffixes = append(suffixes,
-		"hy", "eq", "db", "ob", "cb", "sc", "qu",
-		"bl", "cm", "pe", "sl", "ret", "spc",
+		"lf", "rg", "up", "dn",
+		"hy", "eq", "db",
+		"ob", "cb",
+		"sc", "qu", "bl",
+		"cm", "pe", "sl",
+		"ret", "spc",
 		"kR", "kE", "kQ", "kC", "kO", "kT", "kS", "kW",
 	)
 
