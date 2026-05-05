@@ -51,14 +51,11 @@ func embedConfig(entries []BindingEntry, target string) {
 			if !hasAllowed {
 				continue
 			}
-			fmt.Println(entry.Trigger)
 
 			triggerKey := formatTriggerEntry(entry.Trigger, lookups.embed, "kanata", triggerTransforms)
 			if triggerKey == "" {
 				continue
 			}
-
-			fmt.Println(triggerKey)
 
 			bindKey := formatKeySeq(entry.Binding, lookups.embed, "kanata", "")
 			if bindKey == "" {
@@ -87,15 +84,13 @@ func embedConfig(entries []BindingEntry, target string) {
 
 	case target == "serpl":
 		embedBindings(entries, target, func(key, val string) string {
-			x := fmt.Sprintf("\\\"<%s>\\\" = \\\"%s\\\":line", key, val)
-			println(x)
 			return fmt.Sprintf("\\\"<%s>\\\" = \\\"%s\\\":line", key, val)
 		})
 
-	// case target == "lazygit":
-	// 	embedBindings(entries, target, func(key, val string) string {
-	// 		return fmt.Sprintf("    %s: '<%s>':line", val, key)
-	// 	})
+	case target == "lazygit":
+		embedBindings(entries, target, func(key, val string) string {
+			return fmt.Sprintf("    %s: '<%s>':line", val, key)
+		})
 
 	case strings.HasPrefix(target, "zellij"):
 		normalized := normalizeProgram(target)
@@ -141,7 +136,6 @@ func embedBindings(entries []BindingEntry, target string, formatFunc func(key, v
 
 	mf := newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...)
 	moldForging(fmt.Sprintf("embed-%s", target), mf)
-	fmt.Println(mf)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
