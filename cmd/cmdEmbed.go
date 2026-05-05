@@ -35,14 +35,31 @@ var embedFlags struct {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var triggerTransforms = map[string]string{
-	"return_or_enter":     "ret",
-	"spacebar":            "sp",
-	"right_shift":         "kR",
+	"up_arrow":            "up",
+	"down_arrow":          "dn",
+	"left_arrow":          "lf",
+	"right_arrow":         "rg",
+	"hyphen":              "hy",
+	"equal_sign":          "eq",
 	"delete_or_backspace": "db",
-	"up_arrow":            "▲",
-	"down_arrow":          "▼",
-	"left_arrow":          "◀",
-	"right_arrow":         "▶",
+	"open_bracket":        "ob",
+	"close_bracket":       "cb",
+	"semicolon":           "sc",
+	"quote":               "qu",
+	"backslash":           "bl",
+	"comma":               "cm",
+	"period":              "pe",
+	"slash":               "sl",
+	"return_or_enter":     "ret",
+	"spacebar":            "spc",
+	"right_shift":         "kR",
+	"right_option":        "kE",
+	"right_command":       "kQ",
+	"right_control":       "kW",
+	"left_command":        "kC",
+	"left_option":         "kO",
+	"left_control":        "kT",
+	"left_shift":          "kS",
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
