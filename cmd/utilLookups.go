@@ -19,9 +19,8 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"log"
-
 	"github.com/BurntSushi/toml"
+	"github.com/DanielRivasMD/horus"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,12 +85,19 @@ func buildLookupFuncs(cfg map[string]map[string]string) map[string]KeyLookup {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // TODO: redundant functions?
-// TODO: use horus error handling
 func loadFormat(path string) map[string]map[string]string {
 	var cfg map[string]map[string]string
-	if _, err := toml.DecodeFile(path, &cfg); err != nil {
-		log.Fatalf("failed to load format config from %s: %v", path, err)
-	}
+	_, err := toml.DecodeFile(path, &cfg)
+
+	horus.CheckErr(
+		err,
+		horus.WithMessage("failed to load format config from: "+path),
+		horus.WithExitCode(2),
+		horus.WithFormatter(func(he *horus.Herror) string {
+			return horus.OneLineErr(he.Message)
+		}),
+	)
+
 	return cfg
 }
 

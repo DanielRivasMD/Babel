@@ -19,9 +19,12 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/DanielRivasMD/horus"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,9 +109,15 @@ func embedConfig(entries []BindingEntry, target string) {
 			newMoldConfig(embedFlags.target, []string{embedFlags.target}, replaces...),
 		)
 
-		// TODO: add horus error handler
 	default:
-		log.Fatalf("unsupported --program %q", target)
+		horus.CheckErr(
+			errors.New(""),
+			horus.WithMessage("unsupported --program: " + target),
+			horus.WithExitCode(2),
+			horus.WithFormatter(func(he *horus.Herror) string {
+				return horus.OneLineErr(he.Message)
+			}),
+		)
 	}
 }
 

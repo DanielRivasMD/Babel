@@ -318,11 +318,8 @@ func filterByProgram(entries []BindingEntry, programFilter string) []BindingEntr
 	if programFilter == "" {
 		return entries
 	}
-	// TODO: replace with horus.OneLineErr
-	progRE, err := regexp.Compile(programFilter)
-	if err != nil {
-		log.Fatalf("invalid --program pattern %q: %v", programFilter, err)
-	}
+	progRE, _ := regexp.Compile(programFilter)
+
 	var out []BindingEntry
 	for _, e := range entries {
 		var filtered []ProgramAction
@@ -539,7 +536,6 @@ func tomlList(raw string) string {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: use horus error handler
 func functionKey2UpperCase(key string) string {
 	if strings.HasPrefix(strings.ToLower(key), "f") && len(key) > 1 {
 		if _, err := strconv.Atoi(key[1:]); err == nil {

@@ -19,8 +19,6 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"log"
-
 	"github.com/DanielRivasMD/domovoi"
 	"github.com/DanielRivasMD/horus"
 	"github.com/spf13/cobra"
@@ -89,13 +87,16 @@ func preEmbed(cmd *cobra.Command, args []string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: add error handler horus
 func runEmbed(cmd *cobra.Command, args []string) {
 	paths := resolveEDNFiles("", rootFlags.rootDir)
 	allEntries, err := parseEDNFiles(paths)
-	if err != nil {
-		log.Fatalf("EDN parsing error: %v", err)
-	}
+	horus.CheckErr(
+		err,
+		horus.WithExitCode(2),
+		horus.WithFormatter(func(he *horus.Herror) string {
+			return horus.OneLineErr(he.Message)
+		}),
+	)
 	embedConfig(allEntries, rootFlags.program)
 }
 

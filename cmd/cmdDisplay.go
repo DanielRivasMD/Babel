@@ -19,7 +19,6 @@ package cmd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 import (
-	"log"
 	"sort"
 	"strings"
 
@@ -56,13 +55,16 @@ func DisplayCmd() *cobra.Command {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: add error handler horus
 func runDisplay(cmd *cobra.Command, args []string) {
 	paths := resolveEDNFiles(displayFlags.ednFile, rootFlags.rootDir)
 	allEntries, err := parseEDNFiles(paths)
-	if err != nil {
-		log.Fatalf("EDN parsing error: %v", err)
-	}
+	horus.CheckErr(
+		err,
+		horus.WithExitCode(2),
+		horus.WithFormatter(func(he *horus.Herror) string {
+			return horus.OneLineErr(he.Message)
+		}),
+	)
 
 	filtered := filterByProgram(allEntries, rootFlags.program)
 
