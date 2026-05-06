@@ -50,6 +50,7 @@ func newMoldConfig(outFile string, inFiles []string, replaces ...moldReplace) mo
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func moldForging(op string, mf moldForge) {
+	fmt.Println(mf.Cmd())
 	horus.CheckErr(
 		domovoi.ExecSh(mf.Cmd()),
 		horus.WithOp(op),

@@ -35,18 +35,22 @@ func embedConfig(entries []BindingEntry, target string) {
 	switch {
 
 	case target == "kanata":
-		// Programs that contribute to kanata remapping (triggers and bindings)
 		allowedPrograms := map[string]bool{
-			"helix": true, "serpl": true, "lazygit": true,
-			"zellij": true, "terminal": true, "R": true, "kanata": true,
+			"helix":   true,
+			"serpl":   true,
+			"lazygit": true,
+			"zellij":  true,
+			"term":    true,
+			"micro":   true,
+			"kanata":  true,
 		}
 
 		replaces := []moldReplace{}
 		for _, entry := range entries {
-			// Check if any action belongs to an allowed program
 			hasAllowed := false
 			for _, act := range entry.Actions {
-				if allowedPrograms[act.Program] {
+				normProgram := normalizeProgram(act.Program)
+				if allowedPrograms[normProgram] {
 					hasAllowed = true
 					break
 				}
@@ -65,8 +69,6 @@ func embedConfig(entries []BindingEntry, target string) {
 				continue
 			}
 
-			// Construct the line as it appears in the compose template
-			// Template line: "  {trigger}      XX"
 			linePrefix := fmt.Sprintf("  %s", triggerKey)
 			padding := 10 - len(linePrefix)
 			if padding < 1 {
@@ -75,7 +77,6 @@ func embedConfig(entries []BindingEntry, target string) {
 			oldLine := linePrefix
 			newLine := linePrefix + strings.Repeat(" ", padding) + bindKey
 
-			// Replace the entire line containing the old string
 			replaces = append(replaces, replace(oldLine, newLine+":line"))
 		}
 
@@ -123,8 +124,6 @@ func embedConfig(entries []BindingEntry, target string) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// embedBindings generates replacements for a target program
-// formatFunc receives (key, val) and returns the replacement string (including :line suffix if needed)
 func embedBindings(entries []BindingEntry, target string, formatFunc func(key, val string) string) {
 	filtered := filterByProgram(entries, target)
 
