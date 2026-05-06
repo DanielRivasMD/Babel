@@ -106,6 +106,7 @@ var (
 			// `"A-`" = "no_op"`,
 			`"," = "repeat_last_motion"`,
 			`g = "no_op"`,
+			`G = "no_op"`,
 			`Z = "no_op"`,
 			`"~" = "no_op"	`,
 			`"=" = "no_op"`,
