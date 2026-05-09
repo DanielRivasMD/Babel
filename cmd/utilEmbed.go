@@ -45,6 +45,7 @@ func embedConfig(entries []BindingEntry, target string) {
 			"kanata":  true,
 		}
 
+		// TODO: add condition for entries with sequence present
 		replaces := []moldReplace{}
 		for _, entry := range entries {
 			hasAllowed := false

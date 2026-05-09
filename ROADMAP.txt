@@ -14,6 +14,8 @@ cmd/util.go
   line 42     TODO   load completions from toml or const
   line 47     TODO   add static sorting for display rendering instead of alphabetical
   line 95     TODO   move away from hardcoded variables => load from template
+cmd/utilEmbed.go
+  line 48     TODO   add condition for entries with sequence present
 cmd/utilLookups.go
   line 87     TODO   redundant functions?
 cmd/utilParser.go
