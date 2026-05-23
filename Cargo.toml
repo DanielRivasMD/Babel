@@ -1,0 +1,22 @@
+[package]
+name = "babel"
+version = "0.1.0"
+authors = ["Daniel Rivas <danielrivasmd@gmail.com>"]
+repository = "https://github.com/DanielRivasMD/Coyote"
+keywords = []
+categories = []
+readme = "README.md"
+description = ""
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.5"
+colored = "2"
+dirs = "5"
+edn = "0.2"
+once_cell = "1"
+regex = "1"
+toml = "0.8"
+walkdir = "2"
