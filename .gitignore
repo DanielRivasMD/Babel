@@ -1,4 +1,7 @@
 layouts
 
-# executables
+# exec
 /target
+
+# deprecated
+deprecated
