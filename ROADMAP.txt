@@ -1,3 +1,31 @@
+babel/
+├── src/
+│   ├── main.rs
+│   ├── cli.rs            # clap definitions, all doc strings
+│   ├── commands/
+│   │   ├── mod.rs
+│   │   ├── identity.rs
+│   │   ├── construct.rs
+│   │   ├── compose.rs
+│   │   ├── display.rs
+│   │   ├── embed.rs
+│   │   ├── interpret.rs
+│   │   └── completion.rs # thin wrapper around clap's generator
+│   ├── parser/
+│   │   ├── mod.rs
+│   │   └── edn.rs
+│   ├── lookup.rs          # TOML‑based key translation tables
+│   ├── forger.rs          # mbombo invocations
+│   └── util.rs            # shared formatting helpers
+├── config/
+│   ├── display_binding.toml
+│   ├── display_trigger.toml
+│   ├── embed.toml
+│   └── interpret.toml
+└── Cargo.toml
+
+
+
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
