@@ -1,9 +1,16 @@
-use crate::lookup::Lookups;
-use crate::parser::{BindingEntry, KeySeq};
-use anyhow::Result;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use anyhow::Result as anyResult;
 use colored::*;
 use std::collections::HashMap;
 use std::io::Write;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use crate::lookup::Lookups;
+use crate::parse::{BindingEntry, KeySeq};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct TableRow {
     pub program: String,
@@ -12,6 +19,15 @@ pub struct TableRow {
     pub binding: String,
     pub empty: bool,
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pub fn default_root_dir() -> std::path::PathBuf {
+    let home = dirs::home_dir().expect("cannot determine home directory");
+    home.join(".saiyajin/edn")
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn is_empty_entry(e: &BindingEntry) -> bool {
     e.actions.is_empty()
@@ -25,6 +41,8 @@ pub fn is_empty_entry(e: &BindingEntry) -> bool {
         })
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 pub fn format_trigger_display(
     k: &KeySeq,
     lookups: &HashMap<String, HashMap<String, String>>,
@@ -32,6 +50,8 @@ pub fn format_trigger_display(
 ) -> String {
     format_key_seq(k, lookups, program, " ")
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn format_binding_display(
     b: &BindingEntry,
@@ -63,6 +83,8 @@ pub fn format_binding_display(
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 pub fn format_key_seq(
     k: &KeySeq,
     lookups: &HashMap<String, HashMap<String, String>>,
@@ -86,6 +108,8 @@ pub fn format_key_seq(
         format!("{}{}{}", mod_str, sep, mapped)
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn format_trigger_embed(
     k: &KeySeq,
@@ -112,9 +136,13 @@ pub fn format_trigger_embed(
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 fn lookup(key: &str, map: &HashMap<String, String>) -> String {
     map.get(key).cloned().unwrap_or_else(|| key.to_string())
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn normalize_program(p: &str) -> String {
     match p {
@@ -126,6 +154,8 @@ pub fn normalize_program(p: &str) -> String {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 pub fn function_key_to_upper(key: &str) -> String {
     if key.len() > 1 && key.starts_with('f') && key[1..].parse::<u32>().is_ok() {
         format!("F{}", &key[1..])
@@ -133,6 +163,8 @@ pub fn function_key_to_upper(key: &str) -> String {
         key.to_string()
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn kanata_transform_map() -> HashMap<String, String> {
     HashMap::from([
@@ -164,13 +196,15 @@ pub fn kanata_transform_map() -> HashMap<String, String> {
     ])
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 pub fn emit_config(
     w: &mut dyn Write,
     entries: &[BindingEntry],
     target: &str,
     lookups: &Lookups,
-) -> Result<()> {
-    let filtered = crate::parser::filter_by_program(entries.to_vec(), target);
+) -> anyResult<()> {
+    let filtered = crate::parse::filter_by_program(entries.to_vec(), target);
     let mut raw: HashMap<String, String> = HashMap::new();
     for entry in &filtered {
         for action in &entry.actions {
@@ -264,6 +298,8 @@ pub fn emit_config(
     Ok(())
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 pub(crate) fn format_binds(raw: HashMap<String, String>, program: &str) -> HashMap<String, String> {
     raw.into_iter()
         .map(|(k, v)| {
@@ -278,6 +314,8 @@ pub(crate) fn format_binds(raw: HashMap<String, String>, program: &str) -> HashM
         })
         .collect()
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn toml_list(raw: &str) -> String {
     let inner = raw.trim().trim_start_matches('[').trim_end_matches(']');
@@ -294,6 +332,8 @@ fn toml_list(raw: &str) -> String {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 pub fn print_table(rows: &[TableRow]) {
     if rows.is_empty() {
         println!("No bindings found.");
@@ -301,8 +341,12 @@ pub fn print_table(rows: &[TableRow]) {
     }
     let border = "==================================================================================================";
     println!("{}", border);
-    println!("| Program         | Action                         | Trigger              | Binding              |");
-    println!("|-----------------|--------------------------------|----------------------|----------------------|");
+    println!(
+        "| Program         | Action                         | Trigger              | Binding              |"
+    );
+    println!(
+        "|-----------------|--------------------------------|----------------------|----------------------|"
+    );
     for row in rows {
         let color = program_color(&row.program);
         let line = format!(
@@ -322,6 +366,8 @@ pub fn print_table(rows: &[TableRow]) {
     println!("{}", border);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 fn render_cell(val: &str, width: usize, color: Option<Color>) -> String {
     let raw = format!("{:<width$}", val, width = width);
     if let Some(c) = color {
@@ -330,6 +376,8 @@ fn render_cell(val: &str, width: usize, color: Option<Color>) -> String {
         raw
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn program_color(prog: &str) -> Option<Color> {
     match prog {
@@ -341,3 +389,5 @@ fn program_color(prog: &str) -> Option<Color> {
         _ => None,
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
