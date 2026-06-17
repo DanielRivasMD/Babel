@@ -2,20 +2,19 @@ babel/
 ├── src/
 │   ├── main.rs
 │   ├── cli.rs            # clap definitions, all doc strings
-│   ├── commands/
+│   ├── cmd.rs
+│   ├── cmd/
 │   │   ├── mod.rs
-│   │   ├── identity.rs
 │   │   ├── construct.rs
 │   │   ├── compose.rs
 │   │   ├── display.rs
 │   │   ├── embed.rs
-│   │   ├── interpret.rs
-│   │   └── completion.rs # thin wrapper around clap's generator
-│   ├── parser/
-│   │   ├── mod.rs
+│   │   └── interpret.rs
+│   ├── parse.rs
+│   ├── parse/
 │   │   └── edn.rs
 │   ├── lookup.rs          # TOML‑based key translation tables
-│   ├── forger.rs          # mbombo invocations
+│   ├── forge.rs           # forge invocations
 │   └── util.rs            # shared formatting helpers
 ├── config/
 │   ├── display_binding.toml
@@ -38,14 +37,4 @@ babel/
 
 
 ==================================================
-cmd/util.go
-  line 42     TODO   load completions from toml or const
-  line 47     TODO   add static sorting for display rendering instead of alphabetical
-  line 95     TODO   move away from hardcoded variables => load from template
-cmd/utilEmbed.go
-  line 48     TODO   add condition for entries with sequence present
-cmd/utilLookups.go
-  line 87     TODO   redundant functions?
-cmd/utilParser.go
-  line 478    TODO   expand normalize to other programs beyond zellij, micro & helix
 ==================================================
