@@ -1,11 +1,18 @@
-use crate::cmds::GlobalOpts;
-use anyhow::Result;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use anyhow::Result as anyResult;
 use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-pub fn run(global: GlobalOpts, template: Option<PathBuf>) -> Result<()> {
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use crate::cli::GlobalOpts;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pub fn run(global: GlobalOpts, template: Option<PathBuf>) -> anyResult<()> {
     if global.program.as_deref() != Some("kanata") {
         anyhow::bail!("unsupported program {:?} for compose", global.program);
     }
@@ -55,3 +62,5 @@ pub fn run(global: GlobalOpts, template: Option<PathBuf>) -> Result<()> {
     }
     Ok(())
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
