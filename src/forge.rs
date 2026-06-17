@@ -1,18 +1,25 @@
-use crate::cmds::GlobalOpts;
-use crate::lookup::Lookups;
-use crate::parser::{self, BindingEntry};
-use crate::util::{self, normalize_program};
-use anyhow::{bail, Context, Result};
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use anyhow::{Context, Result as anyResult, bail};
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use crate::cli::GlobalOpts;
+use crate::lookup::Lookups;
+use crate::parse::{self, BindingEntry};
+use crate::util::{self, normalize_program};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn embed_config(
     entries: Vec<BindingEntry>,
     target: &str,
     lookups: &Lookups,
     global: &GlobalOpts,
-) -> Result<()> {
+) -> anyResult<()> {
     match target {
         "kanata" => embed_kanata(entries, lookups, global),
         "serpl" => embed_bindings(entries, target, lookups, global, serpl_format),
@@ -21,6 +28,8 @@ pub fn embed_config(
         _ => bail!("unsupported --program: {}", target),
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn kanata_transform_map() -> HashMap<String, String> {
     HashMap::from([
@@ -52,7 +61,9 @@ fn kanata_transform_map() -> HashMap<String, String> {
     ])
 }
 
-fn embed_kanata(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> Result<()> {
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+fn embed_kanata(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> anyResult<()> {
     let allowed: Vec<&str> = vec![
         "helix", "serpl", "lazygit", "zellij", "term", "micro", "kanata",
     ];
@@ -85,8 +96,10 @@ fn embed_kanata(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOp
         eprintln!("Warning: No kanata bindings found for allowed programs");
     }
     let target_file = global.root.join("..").join("kanata").join("babel.kdb");
-    run_mbombo(&target_file, &[target_file.clone()], replaces)
+    forge_file(&target_file, replaces)
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn embed_bindings(
     entries: Vec<BindingEntry>,
@@ -94,8 +107,8 @@ fn embed_bindings(
     lookups: &Lookups,
     global: &GlobalOpts,
     fmt: fn(&str, &str) -> (String, String),
-) -> Result<()> {
-    let filtered = parser::filter_by_program(entries, target);
+) -> anyResult<()> {
+    let filtered = parse::filter_by_program(entries, target);
     let mut raw: HashMap<String, String> = HashMap::new();
     for entry in &filtered {
         for action in &entry.actions {
@@ -110,20 +123,26 @@ fn embed_bindings(
         replaces.push((old, new));
     }
     let target_file = global.root.join("..").join(target).join("babel.conf");
-    run_mbombo(&target_file, &[target_file.clone()], replaces)
+    forge_file(&target_file, replaces)
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn serpl_format(key: &str, val: &str) -> (String, String) {
     (val.to_string(), format!("\"<{}>\" = \"{}\":line", key, val))
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 fn lazygit_format(key: &str, val: &str) -> (String, String) {
     (val.to_string(), format!("    {}: '<{}>':line", val, key))
 }
 
-fn embed_zellij(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> Result<()> {
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+fn embed_zellij(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> anyResult<()> {
     let norm = normalize_program("zellij");
-    let filtered = parser::filter_by_program(entries, &norm);
+    let filtered = parse::filter_by_program(entries, &norm);
     let mut replaces = Vec::new();
     for entry in &filtered {
         for action in &entry.actions {
@@ -135,21 +154,31 @@ fn embed_zellij(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOp
         }
     }
     let target_file = global.root.join("..").join("zellij").join("config.kdl");
-    run_mbombo(&target_file, &[target_file.clone()], replaces)
+    forge_file(&target_file, replaces)
 }
 
-fn run_mbombo(out: &PathBuf, files: &[PathBuf], replaces: Vec<(String, String)>) -> Result<()> {
-    let mut cmd = Command::new("mbombo");
-    cmd.arg("--out").arg(out);
-    for f in files {
-        cmd.arg("--files").arg(f);
-    }
-    for (old, new) in &replaces {
-        cmd.arg("--replace").arg(format!("{}={}", old, new));
-    }
-    let status = cmd.status().context("failed to run mbombo")?;
-    if !status.success() {
-        bail!("mbombo command failed");
-    }
-    Ok(())
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Pure in‑process replacement using the `issac` library.
+/// Reads `target_file`, applies all `replaces` (old / new strings with optional :line suffix),
+/// then writes the forged result back to the same file.
+fn forge_file(target_file: &PathBuf, replaces: Vec<(String, String)>) -> anyResult<()> {
+    let raw = fs::read_to_string(target_file)
+        .with_context(|| format!("failed to read {}", target_file.display()))?;
+
+    let replacements: Vec<issac::Replacement> = replaces
+        .iter()
+        .map(|(old, new)| {
+            let pair = format!("{old}={new}");
+            pair.parse::<issac::Replacement>()
+                .map_err(|e| anyhow::anyhow!("invalid replacement pair '{pair}': {e}"))
+        })
+        .collect::<anyResult<_>>()?;
+
+    let forged = issac::forge(&[raw.as_str()], &replacements);
+
+    fs::write(target_file, forged)
+        .with_context(|| format!("failed to write {}", target_file.display()))
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
