@@ -1,6 +1,17 @@
-use clap::{Parser, Subcommand, ValueHint};
-use clap_complete::Shell;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use clap::{Parser, Subcommand, ValueHint, ValueEnum};
 use std::path::PathBuf;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pub struct GlobalOpts {
+    pub verbose: bool,
+    pub program: Option<String>,
+    pub root: std::path::PathBuf,
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Interpret hotkeys into markdown keyboard visuals
 #[derive(Parser)]
@@ -12,7 +23,7 @@ use std::path::PathBuf;
 #[command(about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Command,
 
     /// Enable verbose diagnostics
     #[arg(short, long, global = true)]
@@ -27,8 +38,10 @@ pub struct Cli {
     pub root: Option<PathBuf>,
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #[derive(Subcommand)]
-pub enum Commands {
+pub enum Command {
     /// Display current bindings
     Display {
         /// Path to your EDN file
@@ -41,29 +54,35 @@ pub enum Commands {
         #[arg(short, long, default_value = "trigger")]
         sort: String,
     },
+
     /// Generate program‑specific configs from EDN annotations
     Interpret {
         /// Write output to this file instead of stdout
         #[arg(short, long)]
         target: Option<PathBuf>,
     },
+
     /// Install application
     Construct,
+
     /// Create templates
     Compose {
         /// Output file for the generated template (default: stdout)
         #[arg(short, long)]
         template: Option<PathBuf>,
     },
+
     /// Insert program‑specific configs from EDN annotations
     Embed {
         /// Config file to supplement
         #[arg(long)]
         target: Option<String>,
     },
+
     /// Print identity
     #[command(aliases = &["id"])]
     Identity,
+
     /// Generate shell completions
     Completion {
         /// The shell to generate completions for
@@ -71,3 +90,15 @@ pub enum Commands {
         shell: Shell,
     },
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum Shell {
+    Bash,
+    Zsh,
+    Fish,
+    Powershell,
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
