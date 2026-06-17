@@ -1,15 +1,27 @@
-use crate::cmds::GlobalOpts;
-use crate::lookup::Lookups;
-use crate::parser;
-use crate::util;
-use anyhow::Result;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use anyhow::Result as anyResult;
 use std::path::PathBuf;
 
-pub fn run(global: GlobalOpts, file: Option<PathBuf>, render: String, sort: String) -> Result<()> {
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use crate::cli::GlobalOpts;
+use crate::lookup::Lookups;
+use crate::parse;
+use crate::util;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pub fn run(
+    global: GlobalOpts,
+    file: Option<PathBuf>,
+    render: String,
+    sort: String,
+) -> anyResult<()> {
     let lookups = Lookups::load(&global)?;
-    let paths = parser::resolve_edn_files(file, &global.root);
-    let all_entries = parser::parse_edn_files(&paths)?;
-    let filtered = parser::filter_by_program(all_entries, global.program.as_deref().unwrap_or(""));
+    let paths = parse::resolve_edn_files(file, &global.root);
+    let all_entries = parse::parse_edn_files(&paths)?;
+    let filtered = parse::filter_by_program(all_entries, global.program.as_deref().unwrap_or(""));
 
     let final_entries = match render.to_uppercase().as_str() {
         "FULL" => filtered,
@@ -53,3 +65,5 @@ pub fn run(global: GlobalOpts, file: Option<PathBuf>, render: String, sort: Stri
     util::print_table(&rows);
     Ok(())
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
