@@ -1,18 +1,27 @@
-use crate::cmds::GlobalOpts;
-use crate::lookup::Lookups;
-use crate::parser;
-use anyhow::{bail, Result};
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use anyhow::{Result as anyResult, bail};
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-pub fn run(global: GlobalOpts, target: Option<PathBuf>) -> Result<()> {
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+use crate::cli::GlobalOpts;
+use crate::lookup::Lookups;
+use crate::parse;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pub fn run(global: GlobalOpts, target: Option<PathBuf>) -> anyResult<()> {
     if global.program.is_none() {
         bail!("`--program` is required");
     }
     let lookups = Lookups::load(&global)?;
-    let paths = parser::resolve_edn_files(None, &global.root);
-    let all_entries = parser::parse_edn_files(&paths)?;
+    let paths = parse::resolve_edn_files(None, &global.root);
+    let all_entries = parse::parse_edn_files(&paths)?;
 
     let mut writer: Box<dyn Write> = if let Some(path) = target {
         Box::new(File::create(path)?)
@@ -43,3 +52,5 @@ pub fn run(global: GlobalOpts, target: Option<PathBuf>) -> Result<()> {
     }
     Ok(())
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
