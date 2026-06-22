@@ -23,7 +23,6 @@ mod util;
 fn main() -> anyResult<()> {
     let cli = cli::Cli::parse();
     let global = GlobalOpts {
-        verbose: cli.verbose,
         program: cli.program,
         root: cli.root.unwrap_or_else(default_root_dir),
     };

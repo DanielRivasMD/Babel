@@ -6,7 +6,6 @@ use std::path::PathBuf;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub struct GlobalOpts {
-    pub verbose: bool,
     pub program: Option<String>,
     pub root: std::path::PathBuf,
 }
