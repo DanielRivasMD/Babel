@@ -9,13 +9,13 @@ use std::path::PathBuf;
 
 use crate::cli::GlobalOpts;
 use crate::lookup::Lookups;
-use crate::parse::{self, BindingEntry};
-use crate::util::{self, normalize_program};
+use crate::edn;
+use crate::util;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn embed_config(
-    entries: Vec<BindingEntry>,
+    entries: Vec<edn::BindingEntry>,
     target: &str,
     lookups: &Lookups,
     global: &GlobalOpts,
@@ -63,7 +63,7 @@ fn kanata_transform_map() -> HashMap<String, String> {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fn embed_kanata(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> anyResult<()> {
+fn embed_kanata(entries: Vec<edn::BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> anyResult<()> {
     let allowed: Vec<&str> = vec![
         "helix", "serpl", "lazygit", "zellij", "term", "micro", "kanata",
     ];
@@ -73,7 +73,7 @@ fn embed_kanata(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOp
         let has_allowed = entry
             .actions
             .iter()
-            .any(|a| allowed.contains(&normalize_program(&a.program).as_str()));
+            .any(|a| allowed.contains(&util::normalize_program(&a.program).as_str()));
         if !has_allowed {
             continue;
         }
@@ -102,13 +102,13 @@ fn embed_kanata(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOp
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn embed_bindings(
-    entries: Vec<BindingEntry>,
+    entries: Vec<edn::BindingEntry>,
     target: &str,
     lookups: &Lookups,
     global: &GlobalOpts,
     fmt: fn(&str, &str) -> (String, String),
 ) -> anyResult<()> {
-    let filtered = parse::filter_by_program(entries, target);
+    let filtered = edn::filter_by_program(entries, target);
     let mut raw: HashMap<String, String> = HashMap::new();
     for entry in &filtered {
         for action in &entry.actions {
@@ -140,9 +140,9 @@ fn lazygit_format(key: &str, val: &str) -> (String, String) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fn embed_zellij(entries: Vec<BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> anyResult<()> {
-    let norm = normalize_program("zellij");
-    let filtered = parse::filter_by_program(entries, &norm);
+fn embed_zellij(entries: Vec<edn::BindingEntry>, lookups: &Lookups, global: &GlobalOpts) -> anyResult<()> {
+    let norm = util::normalize_program("zellij");
+    let filtered = edn::filter_by_program(entries, &norm);
     let mut replaces = Vec::new();
     for entry in &filtered {
         for action in &entry.actions {

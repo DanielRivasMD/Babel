@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use crate::cli::GlobalOpts;
 use crate::lookup::Lookups;
-use crate::parse;
+use crate::edn;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -20,8 +20,8 @@ pub fn run(global: GlobalOpts, target: Option<PathBuf>) -> anyResult<()> {
         bail!("`--program` is required");
     }
     let lookups = Lookups::load(&global)?;
-    let paths = parse::resolve_edn_files(None, &global.root);
-    let all_entries = parse::parse_edn_files(&paths)?;
+    let paths = edn::resolve_edn_files(None, &global.root);
+    let all_entries = edn::parse_edn_files(&paths)?;
 
     let mut writer: Box<dyn Write> = if let Some(path) = target {
         Box::new(File::create(path)?)

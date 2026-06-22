@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use crate::cli::GlobalOpts;
 use crate::lookup::Lookups;
-use crate::parse;
+use crate::edn;
 use crate::util;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -19,9 +19,9 @@ pub fn run(
     sort: String,
 ) -> anyResult<()> {
     let lookups = Lookups::load(&global)?;
-    let paths = parse::resolve_edn_files(file, &global.root);
-    let all_entries = parse::parse_edn_files(&paths)?;
-    let filtered = parse::filter_by_program(all_entries, global.program.as_deref().unwrap_or(""));
+    let paths = edn::resolve_edn_files(file, &global.root);
+    let all_entries = edn::parse_edn_files(&paths)?;
+    let filtered = edn::filter_by_program(all_entries, global.program.as_deref().unwrap_or(""));
 
     let final_entries = match render.to_uppercase().as_str() {
         "FULL" => filtered,

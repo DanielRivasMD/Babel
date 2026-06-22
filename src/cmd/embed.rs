@@ -7,7 +7,7 @@ use anyhow::{Context, Result as anyResult, bail};
 use crate::cli::GlobalOpts;
 use crate::forge;
 use crate::lookup::Lookups;
-use crate::parse;
+use crate::edn;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -19,8 +19,8 @@ pub fn run(global: GlobalOpts, target: Option<String>) -> anyResult<()> {
     if global.program.is_none() {
         bail!("`--program` is required");
     }
-    let paths = parse::resolve_edn_files(None, &global.root);
-    let all_entries = parse::parse_edn_files(&paths)?;
+    let paths = edn::resolve_edn_files(None, &global.root);
+    let all_entries = edn::parse_edn_files(&paths)?;
     forge::embed_config(all_entries, &target, &lookups, &global)?;
     Ok(())
 }

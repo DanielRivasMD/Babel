@@ -8,7 +8,7 @@ use std::io::Write;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 use crate::lookup::Lookups;
-use crate::parse::{BindingEntry, KeySeq};
+use crate::edn;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -29,7 +29,7 @@ pub fn default_root_dir() -> std::path::PathBuf {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn is_empty_entry(e: &BindingEntry) -> bool {
+pub fn is_empty_entry(e: &edn::BindingEntry) -> bool {
     e.actions.is_empty()
         || e.actions.iter().all(|a| {
             a.program.trim().is_empty()
@@ -44,7 +44,7 @@ pub fn is_empty_entry(e: &BindingEntry) -> bool {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn format_trigger_display(
-    k: &KeySeq,
+    k: &edn::KeySeq,
     lookups: &HashMap<String, HashMap<String, String>>,
     program: &str,
 ) -> String {
@@ -54,7 +54,7 @@ pub fn format_trigger_display(
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn format_binding_display(
-    b: &BindingEntry,
+    b: &edn::BindingEntry,
     lookups: &HashMap<String, HashMap<String, String>>,
     program: &str,
 ) -> String {
@@ -86,7 +86,7 @@ pub fn format_binding_display(
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn format_key_seq(
-    k: &KeySeq,
+    k: &edn::KeySeq,
     lookups: &HashMap<String, HashMap<String, String>>,
     program: &str,
     sep: &str,
@@ -112,7 +112,7 @@ pub fn format_key_seq(
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn format_trigger_embed(
-    k: &KeySeq,
+    k: &edn::KeySeq,
     lookups: &HashMap<String, HashMap<String, String>>,
     program: &str,
     transforms: &HashMap<String, String>,
@@ -200,11 +200,11 @@ pub fn kanata_transform_map() -> HashMap<String, String> {
 
 pub fn emit_config(
     w: &mut dyn Write,
-    entries: &[BindingEntry],
+    entries: &[edn::BindingEntry],
     target: &str,
     lookups: &Lookups,
 ) -> anyResult<()> {
-    let filtered = crate::parse::filter_by_program(entries.to_vec(), target);
+    let filtered = crate::edn::filter_by_program(entries.to_vec(), target);
     let mut raw: HashMap<String, String> = HashMap::new();
     for entry in &filtered {
         for action in &entry.actions {
