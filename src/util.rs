@@ -325,40 +325,6 @@ pub fn emit_config(
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub(crate) fn format_binds(raw: HashMap<String, String>, program: &str) -> HashMap<String, String> {
-    raw.into_iter()
-        .map(|(k, v)| {
-            let v = match program {
-                p if p.starts_with("helix-") => toml_list(&v),
-                "micro" | "lazygit" | "serpl" | "zellij" => {
-                    v.trim_matches(&['[', ']'] as &[_]).to_string()
-                }
-                _ => v,
-            };
-            (k, v)
-        })
-        .collect()
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-fn toml_list(raw: &str) -> String {
-    let inner = raw.trim().trim_start_matches('[').trim_end_matches(']');
-    if inner.starts_with(":sh ") || inner.starts_with(":echo ") {
-        format!("[\"{}\"]", inner)
-    } else if inner.is_empty() {
-        "[]".to_string()
-    } else {
-        let parts: Vec<_> = inner
-            .split_whitespace()
-            .map(|p| format!("\"{}\"", p))
-            .collect();
-        format!("[{}]", parts.join(","))
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 pub fn embed_config(
     entries: Vec<edn::BindingEntry>,
     program: &str,
