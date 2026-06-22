@@ -81,8 +81,8 @@ pub enum Command {
     /// Insert program‑specific configs from EDN annotations
     Embed {
         /// Config file to supplement
-        #[arg(long)]
-        target: Option<String>,
+        #[arg(short, long)]
+        target: PathBuf,
     },
 
     /// Print identity

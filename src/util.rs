@@ -361,16 +361,16 @@ fn toml_list(raw: &str) -> String {
 
 pub fn embed_config(
     entries: Vec<edn::BindingEntry>,
-    target: &str,
+    program: &str,
+    target_file: &PathBuf,
     lookups: &Lookups,
-    global: &GlobalOpts,
 ) -> anyResult<()> {
-    match target {
-        "kanata" => embed_kanata(entries, lookups, global),
-        "serpl" => embed_bindings(entries, target, lookups, global, serpl_format),
-        "lazygit" => embed_bindings(entries, target, lookups, global, lazygit_format),
-        z if z.starts_with("zellij") => embed_zellij(entries, lookups, global),
-        _ => bail!("unsupported --program: {}", target),
+    match program {
+        "kanata" => embed_kanata(entries, target_file, lookups),
+        "serpl" => embed_bindings(entries, program, target_file, lookups, serpl_format),
+        "lazygit" => embed_bindings(entries, program, target_file, lookups, lazygit_format),
+        z if z.starts_with("zellij") => embed_zellij(entries, program, target_file, lookups),
+        _ => bail!("unsupported --program: {}", program),
     }
 }
 
@@ -378,8 +378,8 @@ pub fn embed_config(
 
 fn embed_kanata(
     entries: Vec<edn::BindingEntry>,
+    target_file: &PathBuf,
     lookups: &Lookups,
-    global: &GlobalOpts,
 ) -> anyResult<()> {
     let allowed: Vec<&str> = vec![
         "helix", "serpl", "lazygit", "zellij", "term", "micro", "kanata",
@@ -412,35 +412,32 @@ fn embed_kanata(
     if replaces.is_empty() {
         eprintln!("Warning: No kanata bindings found for allowed programs");
     }
-    let target_file = global.root.join("..").join("kanata").join("babel.kdb");
-    forge_file(&target_file, replaces)
+    forge_file(target_file, replaces)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fn embed_bindings(
     entries: Vec<edn::BindingEntry>,
-    target: &str,
+    program: &str,
+    target_file: &PathBuf,
     lookups: &Lookups,
-    global: &GlobalOpts,
     fmt: fn(&str, &str) -> (String, String),
 ) -> anyResult<()> {
-    let filtered = edn::filter_by_program(entries, target);
+    let filtered = edn::filter_by_program(entries, program);
     let mut raw: HashMap<String, String> = HashMap::new();
     for entry in &filtered {
         for action in &entry.actions {
             let key = format_key_seq(&entry.binding, &lookups.embed, &action.program, "-");
-            raw.insert(key, action.command.as_target_string(target));
+            raw.insert(key, action.command.as_target_string(program));
         }
     }
-    let formatted = format_binds(raw, target);
     let mut replaces = Vec::new();
-    for (key, val) in &formatted {
+    for (key, val) in &raw {
         let (old, new) = fmt(key, val);
         replaces.push((old, new));
     }
-    let target_file = global.root.join("..").join(target).join("babel.conf");
-    forge_file(&target_file, replaces)
+    forge_file(target_file, replaces)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -459,10 +456,11 @@ fn lazygit_format(key: &str, val: &str) -> (String, String) {
 
 fn embed_zellij(
     entries: Vec<edn::BindingEntry>,
+    program: &str,
+    target_file: &PathBuf,
     lookups: &Lookups,
-    global: &GlobalOpts,
 ) -> anyResult<()> {
-    let norm = normalize_program("zellij");
+    let norm = normalize_program(program);
     let filtered = edn::filter_by_program(entries, &norm);
     let mut replaces = Vec::new();
     for entry in &filtered {
@@ -474,8 +472,7 @@ fn embed_zellij(
             replaces.push((format!("\"{}\"", lhs), rhs));
         }
     }
-    let target_file = global.root.join("..").join("zellij").join("config.kdl");
-    forge_file(&target_file, replaces)
+    forge_file(target_file, replaces)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
