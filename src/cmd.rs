@@ -14,13 +14,14 @@ pub mod interpret;
 
 pub mod completion {
 
-    use clap::{Command, CommandFactory};
+    use clap::{Arg, Command, CommandFactory};
     use clap_complete::{generate, shells::*};
     use std::io;
 
     use crate::cli;
 
     pub fn run(shell: cli::Shell) -> super::anyResult<()> {
+        // Build the filtered subcommand list (hides identity / completion)
         let visible: Vec<_> = cli::Cli::command()
             .get_subcommands()
             .filter(|s| !s.is_hide_set())
@@ -28,6 +29,15 @@ pub mod completion {
             .collect();
 
         let mut cmd = Command::new(env!("CARGO_BIN_NAME")).subcommands(visible);
+
+        // Manually add global flags from the full CLI definition
+        let full = cli::Cli::command();
+        for arg in full.get_arguments() {
+            let name = arg.get_id().as_str();
+            if name == "program" || name == "root" || name == "verbose" {
+                cmd = cmd.arg(arg.clone());
+            }
+        }
 
         let name = cmd.get_name().to_string();
 
