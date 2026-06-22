@@ -66,10 +66,12 @@ pub fn format_binding_display(
     program: &str,
 ) -> String {
     let program_norm = normalize_program(program);
+    let empty = HashMap::new();
     let lookup_map = lookups
         .get(&program_norm)
         .or_else(|| lookups.get("default"))
-        .unwrap();
+        .unwrap_or(&empty);
+
     let key = if b.sequence.is_empty() {
         &b.binding.key
     } else {
@@ -99,8 +101,12 @@ pub fn format_key_seq(
     sep: &str,
 ) -> String {
     let program_norm = normalize_program(program);
-    let default_map = lookups.get("default").unwrap();
-    let map = lookups.get(&program_norm).unwrap_or(default_map);
+    let empty = HashMap::new();
+    let map = lookups
+        .get(&program_norm)
+        .or_else(|| lookups.get("default"))
+        .unwrap_or(&empty);
+
     let mod_parts: Vec<String> = k
         .modifier
         .chars()
@@ -125,8 +131,12 @@ pub fn format_trigger_embed(
     transforms: &HashMap<String, String>,
 ) -> String {
     let norm = normalize_program(program);
-    let default_map = lookups.get("default").unwrap();
-    let map = lookups.get(&norm).unwrap_or(default_map);
+    let empty = HashMap::new();
+    let map = lookups
+        .get(&norm)
+        .or_else(|| lookups.get("default"))
+        .unwrap_or(&empty);
+
     let mod_parts: String = k
         .modifier
         .chars()
