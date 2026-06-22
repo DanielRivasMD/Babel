@@ -5,9 +5,9 @@ use anyhow::{Context, Result as anyResult, bail};
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 use crate::cli::GlobalOpts;
-use crate::forge;
-use crate::lookup::Lookups;
 use crate::edn;
+use crate::lookup::Lookups;
+use crate::util;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -21,7 +21,7 @@ pub fn run(global: GlobalOpts, target: Option<String>) -> anyResult<()> {
     }
     let paths = edn::resolve_edn_files(None, &global.root);
     let all_entries = edn::parse_edn_files(&paths)?;
-    forge::embed_config(all_entries, &target, &lookups, &global)?;
+    util::embed_config(all_entries, &target, &lookups, &global)?;
     Ok(())
 }
 

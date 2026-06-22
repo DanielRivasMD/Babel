@@ -15,7 +15,6 @@ use util::default_root_dir;
 mod cli;
 mod cmd;
 mod edn;
-mod forge;
 mod lookup;
 mod util;
 
