@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use clap::{Parser, Subcommand, ValueHint, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum, ValueHint};
 use std::path::PathBuf;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -13,21 +13,23 @@ pub struct GlobalOpts {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const HELP: &str = r"";
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /// Interpret hotkeys into markdown keyboard visuals
 #[derive(Parser)]
 #[command(
-    name = "babel",
-    version,
-    author = "Daniel Rivas <danielrivasmd@gmail.com>"
+    name = env!("CARGO_PKG_NAME"),
+    version = env!("CARGO_PKG_VERSION"),
+    author = env!("CARGO_PKG_AUTHORS"),
+    about = env!("CARGO_PKG_DESCRIPTION"),
+    before_help = concat!(env!("CARGO_PKG_AUTHORS"), "\n", env!("CARGO_PKG_NAME"), " v", env!("CARGO_PKG_VERSION")),
+    long_about = HELP,
 )]
-#[command(about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
-
-    /// Enable verbose diagnostics
-    #[arg(short, long, global = true)]
-    pub verbose: bool,
 
     /// Regex or substring to filter Program names (e.g. helix)
     #[arg(long, global = true, value_hint = ValueHint::Other)]
@@ -36,6 +38,10 @@ pub struct Cli {
     /// Config root (recurses .edn files)
     #[arg(long, global = true, value_hint = ValueHint::DirPath)]
     pub root: Option<PathBuf>,
+
+    /// Enable verbose diagnostics
+    #[arg(short, long, global = true)]
+    pub verbose: bool,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,7 +54,7 @@ pub enum Command {
         #[arg(short, long)]
         file: Option<PathBuf>,
         /// Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)
-        #[arg(short = 'm', long, default_value = "DEFAULT")]
+        #[arg(short, long, default_value = "DEFAULT")]
         render: String,
         /// Sort output by one of: program, action, trigger, binding
         #[arg(short, long, default_value = "trigger")]
@@ -80,12 +86,14 @@ pub enum Command {
     },
 
     /// Print identity
+    #[command(hide = true)]
     #[command(aliases = &["id"])]
     Identity,
 
     /// Generate shell completions
+    #[command(hide = true)]
     Completion {
-        /// The shell to generate completions for
+        /// Shell for which to generate completions
         #[arg(value_enum)]
         shell: Shell,
     },
