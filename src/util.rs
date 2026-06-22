@@ -43,8 +43,12 @@ pub fn is_empty_entry(e: &edn::BindingEntry) -> bool {
                 || a.program == "<nil>"
                 || a.action.trim().is_empty()
                 || a.action == "<nil>"
-                || a.command.trim().is_empty()
-                || a.command == "<nil>"
+                || match &a.command {
+                    edn::Command::Simple(s) => s.trim().is_empty() || s == "<nil>",
+                    edn::Command::List(v) => {
+                        v.is_empty() || v.iter().all(|s| s.trim().is_empty() || s == "<nil>")
+                    }
+                }
         })
 }
 
@@ -226,10 +230,9 @@ pub fn emit_config(
     for entry in &filtered {
         for action in &entry.actions {
             let key = format_key_seq(&entry.binding, &lookups.interpret, &action.program, "-");
-            raw.insert(key, action.command.clone());
+            raw.insert(key, action.command.as_target_string(target));
         }
     }
-    let formatted = format_binds(raw, target);
 
     let headers: HashMap<&str, &[&str]> = HashMap::from([
         ("helix-common", &[][..]),
@@ -293,19 +296,24 @@ pub fn emit_config(
     ]);
 
     if target.starts_with("helix-") || target == "micro" {
-        if let Some(lines) = headers.get(target) {
-            for line in *lines {
-                writeln!(w, "{line}")?;
-            }
-        }
         if target == "micro" {
             writeln!(w, "{{")?;
-            for (key, val) in &formatted {
+            if let Some(lines) = headers.get(target) {
+                for line in *lines {
+                    writeln!(w, "  {line}")?;
+                }
+            }
+            for (key, val) in &raw {
                 writeln!(w, "  {:?}: {:?},", key, val)?;
             }
             writeln!(w, "}}")?;
         } else {
-            for (key, val) in &formatted {
+            if let Some(lines) = headers.get(target) {
+                for line in *lines {
+                    writeln!(w, "{line}")?;
+                }
+            }
+            for (key, val) in &raw {
                 writeln!(w, "{} = {}", key, val)?;
             }
         }
@@ -422,7 +430,7 @@ fn embed_bindings(
     for entry in &filtered {
         for action in &entry.actions {
             let key = format_key_seq(&entry.binding, &lookups.embed, &action.program, "-");
-            raw.insert(key, action.command.clone());
+            raw.insert(key, action.command.as_target_string(target));
         }
     }
     let formatted = format_binds(raw, target);
@@ -460,8 +468,8 @@ fn embed_zellij(
     for entry in &filtered {
         for action in &entry.actions {
             let bind_key = format_key_seq(&entry.binding, &lookups.embed, &norm, " ");
-            let cmd = action.command.trim_matches(&['[', ']'] as &[_]);
-            let lhs = cmd.to_string();
+            let cmd = action.command.as_target_string("zellij");
+            let lhs = cmd.clone();
             let rhs = format!("        bind \"{}\" {{ {} }}:line", bind_key, cmd);
             replaces.push((format!("\"{}\"", lhs), rhs));
         }

@@ -33,10 +33,41 @@ pub struct KeySeq {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
+pub enum Command {
+    Simple(String),
+    List(Vec<String>),
+}
+
+impl Command {
+    /// Convert the command into the appropriate string representation for the given target program.
+    pub fn as_target_string(&self, target: &str) -> String {
+        match self {
+            Command::Simple(s) => {
+                if target.starts_with("helix-") {
+                    format!("[\"{}\"]", s)
+                } else {
+                    s.clone()
+                }
+            }
+            Command::List(items) => {
+                if target.starts_with("helix-") {
+                    let parts: Vec<String> = items.iter().map(|s| format!("\"{}\"", s)).collect();
+                    format!("[{}]", parts.join(", "))
+                } else {
+                    items.join(" ")
+                }
+            }
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone)]
 pub struct ProgramAction {
     pub program: String,
     pub action: String,
-    pub command: String,
+    pub command: Command,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -286,7 +317,7 @@ fn parse_binding_entry(
                     let mut pa = ProgramAction {
                         program: String::new(),
                         action: String::new(),
-                        command: String::new(),
+                        command: Command::Simple(String::new()),
                     };
                     for (k, v) in map {
                         let key_str = value_to_key_string(k);
@@ -294,7 +325,22 @@ fn parse_binding_entry(
                         match key_str.as_str() {
                             "program" => pa.program = val_str,
                             "action" => pa.action = val_str,
-                            "exec" => pa.command = val_str,
+                            "exec" => {
+                                // v is the Value; convert it into a Command
+                                pa.command = match v {
+                                    Value::Vector(vec) => {
+                                        let items: Vec<String> = vec
+                                            .iter()
+                                            .map(|val| value_to_edn_string(val))
+                                            .collect();
+                                        Command::List(items)
+                                    }
+                                    Value::String(s) | Value::Symbol(s) => {
+                                        Command::Simple(s.clone())
+                                    }
+                                    _ => Command::Simple(format!("{:?}", v)), // fallback
+                                };
+                            }
                             "sequence" => seq = val_str,
                             _ => {}
                         }
