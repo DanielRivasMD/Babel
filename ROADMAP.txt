@@ -1,7 +1,7 @@
 babel/
 ├── src/
 │   ├── main.rs
-│   ├── cli.rs            # clap definitions, all doc strings
+│   ├── cli.rs
 │   ├── cmd.rs
 │   ├── cmd/
 │   │   ├── mod.rs
@@ -10,12 +10,9 @@ babel/
 │   │   ├── display.rs
 │   │   ├── embed.rs
 │   │   └── interpret.rs
-│   ├── parse.rs
-│   ├── parse/
-│   │   └── edn.rs
-│   ├── lookup.rs          # TOML‑based key translation tables
-│   ├── forge.rs           # forge invocations
-│   └── util.rs            # shared formatting helpers
+│   ├── edn.rs
+│   ├── lookup.rs
+│   └── util.rs
 ├── config/
 │   ├── display_binding.toml
 │   ├── display_trigger.toml
@@ -25,11 +22,47 @@ babel/
 
 
 
+babel tool read custom EDN‑based keybinding format
+- display => bindings table
+- interpret => bindings into program‑specific config
+- embed => bindings into existing config files
+- construct => initiate babel self-config
+- compose => create templates
+- completion => shell completions
+- identity => reveal identity
+
+strengths:
+- unified, cross‑program keybinding management from single source of truth
+- modular CLI with clear subcommands & global filtering
+- external TOML lookups make display / output formatting customisable
+- embedding via issac allows precise in‑place modifications of existing configs
+- coloured table output improves readability
+
+weaknesses:
+- EDN parsing is brittle: custom regex scanning (extract_entry) can fail on nested or non‑standard EDN, uses risky unwrap() on character indexing
+- hard‑coded assumptions: root directory defaults
+- lookup loading ignores the global --root flag
+- minimal error handling - no line numbers in parse errors, no validation command
+
+usefulness:
+- babel is very useful for advanced terminal users who maintain custom keybinding layers and want to automatically synchronise consistent hotkeys across programs, saving repetitive manual config editing
+
+potential enhancements:
+- robust EDN parsing => replace custom regex extraction with a schema‑driven approach (e.g., serde + EDN) for safety & extensibility
+- centralised transformation maps => eliminate duplication & allow pluggable formats
+- configurable embed paths => use TOML profiles instead of hard‑coded relative paths
+- dry‑run / diff preview => show what would change before embedding
+- validation subcommand => check EDN files for syntax errors, missing fields, or duplicate bindings
+- extend interpret families => allow user‑defined sub‑config mappings (e.g., for Neovim, Emacs)
+- error reporting => include file name and line number on parse failures
+- add test coverage for parsing, formatting & embedding logic
+
+
+
 - add a command for generating documentation on sql architecture => fetch table name, get table fields & comments
 - wire up sql generation command with lsp
 
 - render binds through babel can be implemented also to other programs => yazi & lazygit?
-- refactor redundant functions & workflows
 - render a color coded keyboard
   for empty (dimmed) & used bindings (colored & bold)
   add tab completion for bindable modifiers => right-alt, right-cmd, left-shift, etc
