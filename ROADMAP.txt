@@ -39,22 +39,22 @@ strengths:
 - coloured table output improves readability
 
 weaknesses:
-- EDN parsing is brittle: custom regex scanning (extract_entry) can fail on nested or non‑standard EDN, uses risky unwrap() on character indexing
-- hard‑coded assumptions: root directory defaults
-- lookup loading ignores the global --root flag
-- minimal error handling - no line numbers in parse errors, no validation command
 
 usefulness:
-- babel is very useful for advanced terminal users who maintain custom keybinding layers and want to automatically synchronise consistent hotkeys across programs, saving repetitive manual config editing
+babel is very useful for advanced terminal users who maintain custom keybinding layers and want to automatically synchronise consistent hotkeys across programs, saving repetitive manual config editing
 
 potential enhancements:
-- robust EDN parsing => replace custom regex extraction with a schema‑driven approach (e.g., serde + EDN) for safety & extensibility
+* Marker‑based embedding
+* Data‑driven formatting via TOML templates
+* dry‑run / diff preview => show what would change before embedding
+* robust EDN parsing:
+  * replace custom regex extraction with a schema‑driven approach
+  * add schema validation via serde
+  * error reporting => include file name and line number on parse failures
+  * add validate edn command
+* improve error handling
 - centralised transformation maps => eliminate duplication & allow pluggable formats
 - configurable embed paths => use TOML profiles instead of hard‑coded relative paths
-- dry‑run / diff preview => show what would change before embedding
-- validation subcommand => check EDN files for syntax errors, missing fields, or duplicate bindings
-- extend interpret families => allow user‑defined sub‑config mappings (e.g., for Neovim, Emacs)
-- error reporting => include file name and line number on parse failures
 - add test coverage for parsing, formatting & embedding logic
 
 
