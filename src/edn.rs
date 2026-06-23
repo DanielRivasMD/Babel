@@ -1,16 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use anyhow::Result;
+use anyhow::Result as anyResult;
+use edn::Value;
+use edn::parser::Parser;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-use edn::Value;
-use edn::parser::Parser;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -99,7 +96,7 @@ pub fn resolve_edn_files(file: Option<PathBuf>, root: &Path) -> Vec<PathBuf> {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn parse_edn_files(paths: &[PathBuf]) -> Result<Vec<BindingEntry>> {
+pub fn parse_edn_files(paths: &[PathBuf]) -> anyResult<Vec<BindingEntry>> {
     let mut all = Vec::new();
     for path in paths {
         all.extend(parse_edn_file(path)?);
@@ -109,7 +106,7 @@ pub fn parse_edn_files(paths: &[PathBuf]) -> Result<Vec<BindingEntry>> {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fn parse_edn_file(path: &Path) -> Result<Vec<BindingEntry>> {
+fn parse_edn_file(path: &Path) -> anyResult<Vec<BindingEntry>> {
     let text = fs::read_to_string(path)?;
     let mode = extract_mode(&text);
     let entries = parse_binding_entries(&text, &mode);
@@ -250,7 +247,7 @@ fn value_to_key_string(v: &Value) -> String {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fn decode_metadata(meta_str: &str) -> Result<HashMap<String, Value>> {
+fn decode_metadata(meta_str: &str) -> anyResult<HashMap<String, Value>> {
     let mut parser = Parser::new(meta_str);
     let opt_result = parser.read();
     let val = opt_result
@@ -271,7 +268,7 @@ fn decode_metadata(meta_str: &str) -> Result<HashMap<String, Value>> {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fn decode_rule(vec_str: &str) -> Result<Vec<Value>> {
+fn decode_rule(vec_str: &str) -> anyResult<Vec<Value>> {
     let mut parser = Parser::new(vec_str);
     let opt_result = parser.read();
     let val = opt_result

@@ -5,18 +5,18 @@ use std::path::PathBuf;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use crate::cli::GlobalOpts;
+use crate::cli;
 use crate::edn;
-use crate::lookup::Lookups;
+use crate::lookup;
 use crate::util;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn run(global: GlobalOpts, target: PathBuf) -> anyResult<()> {
+pub fn run(global: cli::GlobalOpts, target: PathBuf) -> anyResult<()> {
     if global.program.is_none() {
         bail!("`--program` is required");
     }
-    let lookups = Lookups::load(&global)?;
+    let lookups = lookup::Lookups::load()?;
     let program = global.program.as_deref().unwrap();
     let paths = edn::resolve_edn_files(None, &global.root);
     let all_entries = edn::parse_edn_files(&paths)?;

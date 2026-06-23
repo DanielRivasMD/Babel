@@ -53,7 +53,7 @@ pub enum Command {
         #[arg(short, long)]
         file: Option<PathBuf>,
         /// Which rows to render: EMPTY (only empty program+action), FULL (all), DEFAULT (non-empty program+action)
-        #[arg(short, long, default_value = "DEFAULT", value_parser = ["empty", "full", "default"])]
+        #[arg(short, long, default_value = "default", value_parser = ["empty", "full", "default"])]
         render: String,
         /// Sort output by one of: program, action, trigger, binding
         #[arg(short, long, default_value = "trigger", value_parser = ["program", "action", "trigger", "binding"])]

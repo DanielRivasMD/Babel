@@ -9,13 +9,8 @@ use std::path::PathBuf;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use issac::{Replacement, forge};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-use crate::cli::GlobalOpts;
 use crate::edn;
-use crate::lookup::Lookups;
+use crate::lookup;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -29,8 +24,8 @@ pub struct TableRow {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn default_root_dir() -> std::path::PathBuf {
-    let home = dirs::home_dir().expect("cannot determine home directory");
+pub fn default_root_dir() -> PathBuf {
+    let home = dirs::home_dir().expect("no home dir");
     home.join(".saiyajin/edn")
 }
 
@@ -56,7 +51,7 @@ pub fn is_empty_entry(e: &edn::BindingEntry) -> bool {
 
 pub fn format_trigger_display(
     k: &edn::KeySeq,
-    lookups: &HashMap<String, HashMap<String, String>>,
+    lookups: &lookup::LookupHash,
     program: &str,
 ) -> String {
     format_key_seq(k, lookups, program, " ")
@@ -66,7 +61,7 @@ pub fn format_trigger_display(
 
 pub fn format_binding_display(
     b: &edn::BindingEntry,
-    lookups: &HashMap<String, HashMap<String, String>>,
+    lookups: &lookup::LookupHash,
     program: &str,
 ) -> String {
     let program_norm = normalize_program(program);
@@ -100,7 +95,7 @@ pub fn format_binding_display(
 
 pub fn format_key_seq(
     k: &edn::KeySeq,
-    lookups: &HashMap<String, HashMap<String, String>>,
+    lookups: &lookup::LookupHash,
     program: &str,
     sep: &str,
 ) -> String {
@@ -130,7 +125,7 @@ pub fn format_key_seq(
 
 pub fn format_trigger_embed(
     k: &edn::KeySeq,
-    lookups: &HashMap<String, HashMap<String, String>>,
+    lookups: &lookup::LookupHash,
     program: &str,
     transforms: &HashMap<String, String>,
 ) -> String {
@@ -223,7 +218,7 @@ pub fn emit_config(
     w: &mut dyn Write,
     entries: &[edn::BindingEntry],
     target: &str,
-    lookups: &Lookups,
+    lookups: &lookup::Lookups,
 ) -> anyResult<()> {
     let filtered = crate::edn::filter_by_program(entries.to_vec(), target);
     let mut raw: HashMap<String, String> = HashMap::new();
@@ -329,7 +324,7 @@ pub fn embed_config(
     entries: Vec<edn::BindingEntry>,
     program: &str,
     target_file: &PathBuf,
-    lookups: &Lookups,
+    lookups: &lookup::Lookups,
 ) -> anyResult<()> {
     match program {
         "kanata" => embed_kanata(entries, target_file, lookups),
@@ -345,7 +340,7 @@ pub fn embed_config(
 fn embed_kanata(
     entries: Vec<edn::BindingEntry>,
     target_file: &PathBuf,
-    lookups: &Lookups,
+    lookups: &lookup::Lookups,
 ) -> anyResult<()> {
     let allowed: Vec<&str> = vec![
         "helix", "serpl", "lazygit", "zellij", "term", "micro", "kanata",
@@ -387,7 +382,7 @@ fn embed_bindings(
     entries: Vec<edn::BindingEntry>,
     program: &str,
     target_file: &PathBuf,
-    lookups: &Lookups,
+    lookups: &lookup::Lookups,
     fmt: fn(&str, &str) -> (String, String),
 ) -> anyResult<()> {
     let filtered = edn::filter_by_program(entries, program);
@@ -424,7 +419,7 @@ fn embed_zellij(
     entries: Vec<edn::BindingEntry>,
     program: &str,
     target_file: &PathBuf,
-    lookups: &Lookups,
+    lookups: &lookup::Lookups,
 ) -> anyResult<()> {
     let norm = normalize_program(program);
     let filtered = edn::filter_by_program(entries, &norm);
@@ -450,16 +445,16 @@ fn forge_file(target_file: &PathBuf, replaces: Vec<(String, String)>) -> anyResu
     let raw = fs::read_to_string(target_file)
         .with_context(|| format!("failed to read {}", target_file.display()))?;
 
-    let replacements: Vec<Replacement> = replaces
+    let replacements: Vec<issac::Replacement> = replaces
         .iter()
         .map(|(old, new)| {
             let pair = format!("{old}={new}");
-            pair.parse::<Replacement>()
+            pair.parse::<issac::Replacement>()
                 .map_err(|e| anyhow::anyhow!("invalid replacement pair '{pair}': {e}"))
         })
         .collect::<anyResult<_>>()?;
 
-    let forged = forge(&[raw.as_str()], &replacements);
+    let forged = issac::forge(&[raw.as_str()], &replacements);
 
     fs::write(target_file, forged)
         .with_context(|| format!("failed to write {}", target_file.display()))

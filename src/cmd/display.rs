@@ -5,20 +5,20 @@ use std::path::PathBuf;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use crate::cli::GlobalOpts;
-use crate::lookup::Lookups;
+use crate::cli;
+use crate::lookup;
 use crate::edn;
 use crate::util;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub fn run(
-    global: GlobalOpts,
+    global: cli::GlobalOpts,
     file: Option<PathBuf>,
     render: String,
     sort: String,
 ) -> anyResult<()> {
-    let lookups = Lookups::load(&global)?;
+    let lookups = lookup::Lookups::load()?;
     let paths = edn::resolve_edn_files(file, &global.root);
     let all_entries = edn::parse_edn_files(&paths)?;
     let filtered = edn::filter_by_program(all_entries, global.program.as_deref().unwrap_or(""));
@@ -29,7 +29,7 @@ pub fn run(
             .into_iter()
             .filter(|e| util::is_empty_entry(e))
             .collect(),
-        _ => filtered
+        &_ => filtered
             .into_iter()
             .filter(|e| !util::is_empty_entry(e))
             .collect(),

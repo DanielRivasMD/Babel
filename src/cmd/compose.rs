@@ -8,11 +8,11 @@ use std::path::PathBuf;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use crate::cli::GlobalOpts;
+use crate::cli;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn run(global: GlobalOpts, template: Option<PathBuf>) -> anyResult<()> {
+pub fn run(global: cli::GlobalOpts, template: Option<PathBuf>) -> anyResult<()> {
     if global.program.as_deref() != Some("kanata") {
         anyhow::bail!("unsupported program {:?} for compose", global.program);
     }

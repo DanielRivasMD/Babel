@@ -5,13 +5,12 @@ use std::fs;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use crate::cli::GlobalOpts;
 use crate::lookup;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn run(global: GlobalOpts) -> anyResult<()> {
-    let config_dirs = lookup::config_dirs(&global)?;
+pub fn run() -> anyResult<()> {
+    let config_dirs = lookup::config_dirs()?;
     for (label, path) in [
         ("babel root", &config_dirs.babel),
         ("config", &config_dirs.config),

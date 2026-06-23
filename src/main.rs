@@ -5,10 +5,6 @@ use clap::Parser;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use cli::Command;
-use cli::GlobalOpts;
-use cmd::{completion, compose, construct, display, embed, identity, interpret};
-use util::default_root_dir;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -22,18 +18,18 @@ mod util;
 
 fn main() -> anyResult<()> {
     let cli = cli::Cli::parse();
-    let global = GlobalOpts {
+    let global = cli::GlobalOpts {
         program: cli.program,
-        root: cli.root.unwrap_or_else(default_root_dir),
+        root: cli.root.unwrap_or_else(util::default_root_dir),
     };
     match cli.command {
-        Command::Construct => construct::run(global)?,
-        Command::Compose { template } => compose::run(global, template)?,
-        Command::Display { file, render, sort } => display::run(global, file, render, sort)?,
-        Command::Embed { target } => embed::run(global, target)?,
-        Command::Interpret { target } => interpret::run(global, target)?,
-        Command::Identity => identity::run()?,
-        Command::Completion { shell } => completion::run(shell)?,
+        cli::Command::Construct => cmd::construct::run()?,
+        cli::Command::Compose { template } => cmd::compose::run(global, template)?,
+        cli::Command::Display { file, render, sort } => cmd::display::run(global, file, render, sort)?,
+        cli::Command::Embed { target } => cmd::embed::run(global, target)?,
+        cli::Command::Interpret { target } => cmd::interpret::run(global, target)?,
+        cli::Command::Identity => cmd::identity::run()?,
+        cli::Command::Completion { shell } => cmd::completion::run(shell)?,
     }
     Ok(())
 }

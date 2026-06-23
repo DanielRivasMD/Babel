@@ -9,17 +9,17 @@ use std::path::PathBuf;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-use crate::cli::GlobalOpts;
-use crate::lookup::Lookups;
+use crate::cli;
+use crate::lookup;
 use crate::edn;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub fn run(global: GlobalOpts, target: Option<PathBuf>) -> anyResult<()> {
+pub fn run(global: cli::GlobalOpts, target: Option<PathBuf>) -> anyResult<()> {
     if global.program.is_none() {
         bail!("`--program` is required");
     }
-    let lookups = Lookups::load(&global)?;
+    let lookups = lookup::Lookups::load()?;
     let paths = edn::resolve_edn_files(None, &global.root);
     let all_entries = edn::parse_edn_files(&paths)?;
 

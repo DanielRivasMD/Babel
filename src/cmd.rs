@@ -14,14 +14,13 @@ pub mod interpret;
 
 pub mod completion {
 
-    use clap::{Arg, Command, CommandFactory};
+    use clap::{Command, CommandFactory};
     use clap_complete::{generate, shells::*};
     use std::io;
 
     use crate::cli;
 
     pub fn run(shell: cli::Shell) -> super::anyResult<()> {
-        // Build the filtered subcommand list (hides identity / completion)
         let visible: Vec<_> = cli::Cli::command()
             .get_subcommands()
             .filter(|s| !s.is_hide_set())
